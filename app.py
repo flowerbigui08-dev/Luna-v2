@@ -137,3 +137,15 @@ st.markdown(f"""
     <p style="color:white; font-size:16px; font-weight:bold;">{info_utc}</p>
 </div>
 """, unsafe_allow_html=True)
+# 6. PIE DE PÁGINA DE CREDIBILIDAD
+st.markdown("""
+    <div style="margin-top: 30px; padding: 15px; border-top: 1px solid #333; text-align: center;">
+        <p style="color: #666; font-size: 12px; line-height: 1.5;">
+            <b>Respaldo Científico:</b><br>
+            Los cálculos de este calendario se generan en tiempo real utilizando la biblioteca 
+            <b>Skyfield</b> y las efemérides <b>DE421 del Jet Propulsion Laboratory (JPL) de la NASA</b>. 
+            Las horas de conjunción y fases lunares cuentan con precisión astronómica profesional 
+            ajustada específicamente para el huso horario de El Salvador (GMT-6).
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
