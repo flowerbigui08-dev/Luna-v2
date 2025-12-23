@@ -12,7 +12,9 @@ tz_sv = pytz.timezone('America/El_Salvador')
 loc_sv = wgs84.latlon(13.689, -89.187)
 hoy_sv = datetime.now(tz_sv)
 
-# Estilos CSS
+# Diccionario para días en español
+dias_esp = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"]
+
 st.markdown("""
     <style>
     .main { background-color: #0e1117; }
@@ -44,25 +46,25 @@ mes_id = st.number_input("Mes", min_value=1, max_value=12, value=hoy_sv.month, l
 
 meses_completos = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"]
 
-# 3. CÁLCULOS ASTRONÓMICOS
+# 3. CÁLCULOS
 ts = api.load.timescale()
 eph = api.load('de421.bsp')
 t0 = ts.from_datetime(tz_sv.localize(datetime(anio, mes_id, 1)))
 ultimo_dia = calendar.monthrange(anio, mes_id)[1]
 t1 = ts.from_datetime(tz_sv.localize(datetime(anio, mes_id, ultimo_dia, 23, 59)))
 
-# Fases lunares
+# Fases
 t_fases, y_fases = almanac.find_discrete(t0, t1, almanac.moon_phases(eph))
 fases_dict = {ti.astimezone(tz_sv).day: [yi, ti.astimezone(tz_sv)] for ti, yi in zip(t_fases, y_fases)}
 
-# Equinoccios y Solsticios
+# Estaciones (Solo para detectar Primavera en Marzo)
 t_seasons, y_seasons = almanac.find_discrete(t0, t1, almanac.seasons(eph))
 seasons_dict = {ti.astimezone(tz_sv).day: yi for ti, yi in zip(t_seasons, y_seasons)}
 
 info_sv, info_utc = "---", "---"
 iconos_fases = {0: "🌑", 1: "🌓", 2: "🌕", 3: "🌗"}
 
-# 4. CONSTRUCCIÓN DE LA TABLA
+# 4. TABLA
 filas_html = ""
 cal = calendar.Calendar(firstweekday=6)
 
@@ -73,27 +75,29 @@ for semana in cal.monthdayscalendar(anio, mes_id):
         else:
             icons, b_style = "", ""
             
-            # Dibujar Equinoccios (🌸)
-            if dia in seasons_dict:
+            # 🌸 Solo Equinoccio de Primavera (Marzo y evento tipo 0)
+            if mes_id == 3 and dia in seasons_dict and seasons_dict[dia] == 0:
                 icons += "🌸"
 
-            # Dibujar Fases
             if dia in fases_dict:
                 f_tipo = fases_dict[dia][0]
                 if f_tipo != "CELEB":
                     icons += iconos_fases.get(f_tipo, "")
-                    if f_tipo == 0: # Luna Nueva / Conjunción
+                    if f_tipo == 0:
                         t_conj = fases_dict[dia][1]
-                        info_sv = t_conj.strftime('%d/%m/%y %I:%M %p')
-                        info_utc = t_conj.astimezone(pytz.utc).strftime('%d/%m/%y %H:%M')
-                        # Lógica de Celebración (si es antes de las 6pm, es mañana, si no, pasado)
+                        # Formatear con día de la semana
+                        dia_semana_sv = dias_esp[t_conj.weekday()]
+                        info_sv = f"{dia_semana_sv} {t_conj.strftime('%d/%m/%y %I:%M %p')}"
+                        
+                        t_utc = t_conj.astimezone(pytz.utc)
+                        dia_semana_utc = dias_esp[t_utc.weekday()]
+                        info_utc = f"{dia_semana_utc} {t_utc.strftime('%d/%m/%y %H:%M')}"
+                        
                         target = dia + 1 if t_conj.hour < 18 else dia + 2
                         if target <= ultimo_dia: fases_dict[target] = ["CELEB", None]
             
-            # Estilo del día actual (borde finito)
             if dia == hoy_sv.day and mes_id == hoy_sv.month and anio == hoy_sv.year:
                 b_style = "border: 1px solid #00FF7F; background: rgba(0,255,127,0.05);"
-            # Estilo Día de Celebración
             elif dia in fases_dict and fases_dict[dia][0] == "CELEB":
                 icons += "🌘"; b_style = "border: 1px solid #FF8C00;"
             
@@ -116,27 +120,21 @@ html_tabla = f"""
 components.html(html_tabla, height=460)
 
 # 5. LEYENDA Y DATOS
-col1, col2 = st.columns(2)
+st.markdown(f"""
+<div class="info-box">
+    <p style="color:#FF8C00; font-weight:bold; margin-bottom:12px;">Simbología:</p>
+    <div class="info-line"><span class="emoji-size">✅</span> Hoy (Día actual)</div>
+    <div class="info-line"><span class="emoji-size">🌑</span> Luna Nueva</div>
+    <div class="info-line"><span class="emoji-size">🌘</span> Día de Celebración</div>
+    <div class="info-line"><span class="emoji-size">🌸</span> Primavera (Marzo)</div>
+    <div class="info-line"><span class="emoji-size">🌕</span> Luna Llena</div>
+</div>
 
-with col1:
-    st.markdown(f"""
-    <div class="info-box">
-        <p style="color:#FF8C00; font-weight:bold; margin-bottom:10px;">Simbología:</p>
-        <div class="info-line"><span style="color:#00FF7F; font-size:18px; margin-right:15px;">□</span> Hoy (Día actual)</div>
-        <div class="info-line"><span class="emoji-size">🌑</span> Luna Nueva</div>
-        <div class="info-line"><span class="emoji-size">🌘</span> Día de Celebración</div>
-        <div class="info-line"><span class="emoji-size">🌸</span> Primavera / Equinoccio</div>
-        <div class="info-line"><span class="emoji-size">🌕</span> Luna Llena</div>
-    </div>
-    """, unsafe_allow_html=True)
-
-with col2:
-    st.markdown(f"""
-    <div class="info-box">
-        <p style="color:#FF8C00; font-weight:bold; margin-bottom:10px;">Próxima Conjunción:</p>
-        <p style="color:#bbb; font-size:14px; margin-bottom:5px;">📍 El Salvador (SV):</p>
-        <p style="color:white; font-size:16px; font-weight:bold; margin-bottom:10px;">{info_sv}</p>
-        <p style="color:#bbb; font-size:14px; margin-bottom:5px;">🌍 Tiempo Universal (UTC):</p>
-        <p style="color:white; font-size:16px; font-weight:bold;">{info_utc}</p>
-    </div>
-    """, unsafe_allow_html=True)
+<div class="info-box">
+    <p style="color:#FF8C00; font-weight:bold; margin-bottom:10px;">Próxima Conjunción:</p>
+    <p style="color:#bbb; font-size:14px; margin-bottom:5px;">📍 El Salvador (SV):</p>
+    <p style="color:white; font-size:16px; font-weight:bold; margin-bottom:10px;">{info_sv}</p>
+    <p style="color:#bbb; font-size:14px; margin-bottom:5px;">🌍 Tiempo Universal (UTC):</p>
+    <p style="color:white; font-size:16px; font-weight:bold;">{info_utc}</p>
+</div>
+""", unsafe_allow_html=True)
