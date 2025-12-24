@@ -14,16 +14,18 @@ hoy_sv = datetime.now(tz_sv)
 
 dias_esp = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"]
 meses_completos = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"]
-meses_abreviados = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"]
 
 st.markdown("""
     <style>
     .main { background-color: #0e1117; }
-    h1 { text-align: center; color: white; margin-bottom: 10px; font-size: 28px; }
-    .label-naranja { color: #FF8C00; text-align: center; font-weight: bold; font-size: 18px; margin-top: 10px; margin-bottom: 5px; }
+    h1 { text-align: center; color: white; margin-bottom: 20px; font-size: 28px; }
+    .label-naranja { color: #FF8C00; text-align: center; font-weight: bold; font-size: 22px; margin-top: 10px; margin-bottom: 0px; }
     
-    /* Centrar el control de año */
-    div[data-testid="stNumberInput"] { width: 160px !important; margin: 0 auto !important; }
+    /* Estilo para los selectores numéricos */
+    div[data-testid="stNumberInput"] { width: 180px !important; margin: 0 auto !important; }
+    
+    /* BLOQUEO DE TECLADO: Evita que el foco active el input de texto */
+    input { pointer-events: none; text-align: center !important; font-size: 20px !important; font-weight: bold !important; }
     
     .info-box {
         background: #1a1a1a; 
@@ -33,32 +35,17 @@ st.markdown("""
         margin-top: 15px;
     }
     .info-line { color: white; font-size: 15px; margin-bottom: 10px; display: flex; align-items: center; }
-    .emoji-size { font-size: 22px; margin-right: 15px; width: 30px; text-align: center; }
     </style>
     """, unsafe_allow_html=True)
 
 st.markdown("<h1>🌙 Calendario Lunar</h1>", unsafe_allow_html=True)
 
-# 2. SELECTORES DE AÑO Y MES (BOTONES PARA EVITAR TECLADO)
+# 2. SELECTORES NUMÉRICOS (AÑO Y MES)
 st.markdown("<p class='label-naranja'>Año</p>", unsafe_allow_html=True)
-anio = st.number_input("Año", min_value=2024, max_value=2030, value=hoy_sv.year, label_visibility="collapsed")
+anio = st.number_input("Año selector", min_value=2024, max_value=2030, value=hoy_sv.year, label_visibility="collapsed")
 
-st.markdown("<p class='label-naranja'>Selecciona el Mes:</p>", unsafe_allow_html=True)
-
-# Inicializar el mes en el estado de la aplicación si no existe
-if 'mes_sel' not in st.session_state:
-    st.session_state.mes_sel = hoy_sv.month
-
-# Crear una cuadrícula de botones para los meses (4 columnas x 3 filas)
-# Esto garantiza que NO se active el teclado
-cols = st.columns(4)
-for i, mes_abr in enumerate(meses_abreviados):
-    with cols[i % 4]:
-        # El botón cambia el estado del mes seleccionado
-        if st.button(mes_abr, use_container_width=True, type="primary" if st.session_state.mes_sel == i+1 else "secondary"):
-            st.session_state.mes_sel = i + 1
-
-mes_id = st.session_state.mes_sel
+st.markdown("<p class='label-naranja'>Mes</p>", unsafe_allow_html=True)
+mes_id = st.number_input("Mes selector", min_value=1, max_value=12, value=hoy_sv.month, label_visibility="collapsed")
 
 # 3. CÁLCULOS
 ts = api.load.timescale()
@@ -119,7 +106,7 @@ for semana in cal.monthdayscalendar(anio, mes_id):
             </td>"""
     filas_html += fila + "</tr>"
 
-st.markdown(f"<h2 style='text-align:center; color:#FF8C00; margin-top:20px; font-size:24px;'>{meses_completos[mes_id-1]} {anio}</h2>", unsafe_allow_html=True)
+st.markdown(f"<h2 style='text-align:center; color:#FF8C00; margin-top:25px; font-size:26px;'>{meses_completos[mes_id-1]} {anio}</h2>", unsafe_allow_html=True)
 
 html_tabla = f"""
 <style>
@@ -131,17 +118,17 @@ html_tabla = f"""
     {filas_html}
 </table>
 """
-components.html(html_tabla, height=500)
+components.html(html_tabla, height=480)
 
 # 5. LEYENDA Y DATOS
 st.markdown(f"""
 <div class="info-box">
     <p style="color:#FF8C00; font-weight:bold; margin-bottom:15px; font-size:17px;">Simbología:</p>
-    <div class="info-line"><span class="emoji-size">✅</span> Hoy (Día actual)</div>
-    <div class="info-line"><span class="emoji-size">🌑</span> Luna Nueva</div>
-    <div class="info-line"><span class="emoji-size">🌘</span> Día de Celebración</div>
-    <div class="info-line"><span class="emoji-size">🌸</span> Primavera (Marzo)</div>
-    <div class="info-line"><span class="emoji-size">🌕</span> Luna Llena</div>
+    <div class="info-line">🟩 &nbsp; Hoy (Día actual)</div>
+    <div class="info-line">🌑 &nbsp; Luna Nueva</div>
+    <div class="info-line">🌘 &nbsp; Día de Celebración</div>
+    <div class="info-line">🌸 &nbsp; Primavera (Marzo)</div>
+    <div class="info-line">🌕 &nbsp; Luna Llena</div>
 </div>
 
 <div class="info-box">
@@ -153,16 +140,17 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-# 6. PIE DE PÁGINA FINAL
+# 6. FIRMA Y RESPALDO
 st.markdown(f"""
-    <div style="margin-top: 30px; padding: 15px; border-top: 1px solid #333; text-align: center;">
-        <p style="color: #666; font-size: 12px; line-height: 1.5;">
+    <div style="margin-top: 30px; padding: 20px; border-top: 1px solid #333; text-align: center;">
+        <p style="color: #666; font-size: 12px; line-height: 1.6;">
             <b>Respaldo Científico:</b><br>
             Los cálculos de este calendario se generan en tiempo real utilizando la biblioteca 
-            <b>Skyfield</b> y las efemérides <b>DE421 del Jet Propulsion Laboratory (JPL) de la NASA</b>. 
-            Las horas de conjunción y fases lunares cuentan con precisión astronómica profesional 
-            ajustada específicamente para el huso horario de El Salvador (GMT-6).<br><br>
-            <span style="color: #888; font-size: 14px; font-style: italic;">Nejapa, Álvaro R</span>
+            <b>Skyfield</b> y las efemérides <b>DE421 de la NASA (JPL)</b>.<br>
+            Ajustado para el huso horario de El Salvador (GMT-6).
+        </p>
+        <p style="color: #888; font-size: 14px; font-style: italic; margin-top: 15px;">
+            Nejapa, Álvaro R
         </p>
     </div>
     """, unsafe_allow_html=True)
