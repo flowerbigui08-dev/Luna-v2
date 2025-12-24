@@ -14,16 +14,16 @@ hoy_sv = datetime.now(tz_sv)
 
 dias_esp = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"]
 meses_completos = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"]
+meses_abreviados = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"]
 
 st.markdown("""
     <style>
     .main { background-color: #0e1117; }
-    h1 { text-align: center; color: white; margin-bottom: 0px; font-size: 28px; }
-    .label-naranja { color: #FF8C00; text-align: center; font-weight: bold; font-size: 20px; margin-top: 15px; }
+    h1 { text-align: center; color: white; margin-bottom: 10px; font-size: 28px; }
+    .label-naranja { color: #FF8C00; text-align: center; font-weight: bold; font-size: 18px; margin-top: 10px; margin-bottom: 5px; }
     
-    /* Forzar que los controles no activen teclado */
+    /* Centrar el control de año */
     div[data-testid="stNumberInput"] { width: 160px !important; margin: 0 auto !important; }
-    input { pointer-events: none; } /* Bloquea el clic en el número, solo permite usar + y - */
     
     .info-box {
         background: #1a1a1a; 
@@ -39,13 +39,26 @@ st.markdown("""
 
 st.markdown("<h1>🌙 Calendario Lunar</h1>", unsafe_allow_html=True)
 
-# 2. SELECTORES CON BOTONES (+ / -)
+# 2. SELECTORES DE AÑO Y MES (BOTONES PARA EVITAR TECLADO)
 st.markdown("<p class='label-naranja'>Año</p>", unsafe_allow_html=True)
 anio = st.number_input("Año", min_value=2024, max_value=2030, value=hoy_sv.year, label_visibility="collapsed")
 
-st.markdown("<p class='label-naranja'>Mes (1 al 12)</p>", unsafe_allow_html=True)
-# Usamos number_input para que aparezcan los botones + y -
-mes_id = st.number_input("Mes", min_value=1, max_value=12, value=hoy_sv.month, label_visibility="collapsed")
+st.markdown("<p class='label-naranja'>Selecciona el Mes:</p>", unsafe_allow_html=True)
+
+# Inicializar el mes en el estado de la aplicación si no existe
+if 'mes_sel' not in st.session_state:
+    st.session_state.mes_sel = hoy_sv.month
+
+# Crear una cuadrícula de botones para los meses (4 columnas x 3 filas)
+# Esto garantiza que NO se active el teclado
+cols = st.columns(4)
+for i, mes_abr in enumerate(meses_abreviados):
+    with cols[i % 4]:
+        # El botón cambia el estado del mes seleccionado
+        if st.button(mes_abr, use_container_width=True, type="primary" if st.session_state.mes_sel == i+1 else "secondary"):
+            st.session_state.mes_sel = i + 1
+
+mes_id = st.session_state.mes_sel
 
 # 3. CÁLCULOS
 ts = api.load.timescale()
@@ -63,7 +76,7 @@ seasons_dict = {ti.astimezone(tz_sv).day: yi for ti, yi in zip(t_seasons, y_seas
 info_sv, info_utc = "---", "---"
 iconos_fases = {0: "🌑", 1: "🌓", 2: "🌕", 3: "🌗"}
 
-# 4. TABLA CON BORDES REDONDEADOS
+# 4. TABLA DEL CALENDARIO
 filas_html = ""
 cal = calendar.Calendar(firstweekday=6)
 
@@ -106,7 +119,6 @@ for semana in cal.monthdayscalendar(anio, mes_id):
             </td>"""
     filas_html += fila + "</tr>"
 
-# Título del mes (aquí es donde aparece el nombre gracias al número seleccionado)
 st.markdown(f"<h2 style='text-align:center; color:#FF8C00; margin-top:20px; font-size:24px;'>{meses_completos[mes_id-1]} {anio}</h2>", unsafe_allow_html=True)
 
 html_tabla = f"""
