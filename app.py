@@ -157,7 +157,7 @@ st.markdown(f"""
             <b>Skyfield</b> y las efemérides <b>DE421 de la NASA (JPL)</b>.<br>
             Ajustado para el huso horario de El Salvador (GMT-6).
         </p>
-        <p style="color: #888; font-size: 16px; font-style: italic; margin-top: 15px; font-weight: bold;">
+        <p style="color: #666; font-size: 16px; font-style: italic; margin-top: 15px; font-weight: bold;">
             Nejapa, Álvaro R
         </p>
     </div>
