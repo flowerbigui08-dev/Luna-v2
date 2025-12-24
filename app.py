@@ -13,7 +13,6 @@ loc_sv = wgs84.latlon(13.689, -89.187)
 hoy_sv = datetime.now(tz_sv)
 
 dias_esp = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"]
-meses_abreviados = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"]
 meses_completos = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"]
 
 st.markdown("""
@@ -22,8 +21,9 @@ st.markdown("""
     h1 { text-align: center; color: white; margin-bottom: 0px; font-size: 28px; }
     .label-naranja { color: #FF8C00; text-align: center; font-weight: bold; font-size: 20px; margin-top: 15px; }
     
-    /* Centrar selectores */
-    .stSelectbox, .stNumberInput { width: 180px !important; margin: 0 auto !important; }
+    /* Forzar que los controles no activen teclado */
+    div[data-testid="stNumberInput"] { width: 160px !important; margin: 0 auto !important; }
+    input { pointer-events: none; } /* Bloquea el clic en el número, solo permite usar + y - */
     
     .info-box {
         background: #1a1a1a; 
@@ -39,14 +39,13 @@ st.markdown("""
 
 st.markdown("<h1>🌙 Calendario Lunar</h1>", unsafe_allow_html=True)
 
-# 2. SELECTORES ACTUALIZADOS
+# 2. SELECTORES CON BOTONES (+ / -)
 st.markdown("<p class='label-naranja'>Año</p>", unsafe_allow_html=True)
 anio = st.number_input("Año", min_value=2024, max_value=2030, value=hoy_sv.year, label_visibility="collapsed")
 
-st.markdown("<p class='label-naranja'>Mes</p>", unsafe_allow_html=True)
-# Selector por nombre de mes
-mes_nombre = st.selectbox("Mes", meses_abreviados, index=hoy_sv.month - 1, label_visibility="collapsed")
-mes_id = meses_abreviados.index(mes_nombre) + 1
+st.markdown("<p class='label-naranja'>Mes (1 al 12)</p>", unsafe_allow_html=True)
+# Usamos number_input para que aparezcan los botones + y -
+mes_id = st.number_input("Mes", min_value=1, max_value=12, value=hoy_sv.month, label_visibility="collapsed")
 
 # 3. CÁLCULOS
 ts = api.load.timescale()
@@ -64,7 +63,7 @@ seasons_dict = {ti.astimezone(tz_sv).day: yi for ti, yi in zip(t_seasons, y_seas
 info_sv, info_utc = "---", "---"
 iconos_fases = {0: "🌑", 1: "🌓", 2: "🌕", 3: "🌗"}
 
-# 4. TABLA
+# 4. TABLA CON BORDES REDONDEADOS
 filas_html = ""
 cal = calendar.Calendar(firstweekday=6)
 
@@ -107,6 +106,7 @@ for semana in cal.monthdayscalendar(anio, mes_id):
             </td>"""
     filas_html += fila + "</tr>"
 
+# Título del mes (aquí es donde aparece el nombre gracias al número seleccionado)
 st.markdown(f"<h2 style='text-align:center; color:#FF8C00; margin-top:20px; font-size:24px;'>{meses_completos[mes_id-1]} {anio}</h2>", unsafe_allow_html=True)
 
 html_tabla = f"""
@@ -141,7 +141,7 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-# 6. RESPALDO CON FIRMA
+# 6. PIE DE PÁGINA FINAL
 st.markdown(f"""
     <div style="margin-top: 30px; padding: 15px; border-top: 1px solid #333; text-align: center;">
         <p style="color: #666; font-size: 12px; line-height: 1.5;">
@@ -149,8 +149,8 @@ st.markdown(f"""
             Los cálculos de este calendario se generan en tiempo real utilizando la biblioteca 
             <b>Skyfield</b> y las efemérides <b>DE421 del Jet Propulsion Laboratory (JPL) de la NASA</b>. 
             Las horas de conjunción y fases lunares cuentan con precisión astronómica profesional 
-            ajustada específicamente para el huso horario de El Salvador (GMT-6).<br>
-            <i style="color: #888; font-size: 13px; display: block; margin-top: 10px;">Nejapa, Álvaro R</i>
+            ajustada específicamente para el huso horario de El Salvador (GMT-6).<br><br>
+            <span style="color: #888; font-size: 14px; font-style: italic;">Nejapa, Álvaro R</span>
         </p>
     </div>
     """, unsafe_allow_html=True)
