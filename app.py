@@ -6,7 +6,7 @@ from datetime import datetime
 import pytz
 import calendar
 
-# 1. CONFIGURACIÓN
+# 1. CONFIGURACIÓN DE PÁGINA
 st.set_page_config(page_title="Luna SV", layout="wide")
 tz_sv = pytz.timezone('America/El_Salvador')
 loc_sv = wgs84.latlon(13.689, -89.187)
@@ -15,6 +15,7 @@ hoy_sv = datetime.now(tz_sv)
 dias_esp = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"]
 meses_completos = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"]
 
+# ESTILOS CSS
 st.markdown("""
     <style>
     .main { background-color: #0e1117; }
@@ -57,17 +58,7 @@ st.markdown("""
 
 st.markdown("<h1>🌙 Calendario Lunar</h1>", unsafe_allow_html=True)
 
-# 2. LÓGICA DE NAVEGACIÓN INFINITA (CORREGIDA)
-if 'mes_idx' not in st.session_state:
-    st.session_state.mes_idx = hoy_sv.month
-
-def cambiar_mes():
-    val = st.session_state.mes_selector
-    if val > 12: st.session_state.mes_idx = 1
-    elif val < 1: st.session_state.mes_idx = 12
-    else: st.session_state.mes_idx = val
-
-# 3. PESTAÑAS
+# 2. PESTAÑAS DE VISTA
 tab_mes, tab_anio = st.tabs(["📅 Vista Mensual", "🗓️ Año Completo"])
 
 with tab_mes:
@@ -75,16 +66,10 @@ with tab_mes:
     with col_a:
         anio = st.number_input("Año", min_value=2024, max_value=2030, value=hoy_sv.year, key="anio_m", label_visibility="collapsed")
     with col_m:
-        # Usamos mes_idx como el valor real, y el selector solo para capturar el clic
-        mes_id = st.number_input("Mes", min_value=0, max_value=13, 
-                                 value=st.session_state.mes_idx, 
-                                 key="mes_selector", 
-                                 on_change=cambiar_mes, 
-                                 label_visibility="collapsed")
-        # Forzamos que la variable mes_id siempre sea el valor real del session_state
-        mes_id = st.session_state.mes_idx
+        # REGRESAMOS AL BLOQUEO SIMPLE: min 1, max 12
+        mes_id = st.number_input("Mes", min_value=1, max_value=12, value=hoy_sv.month, key="mes_m_fix", label_visibility="collapsed")
 
-    # CÁLCULOS LUNARES
+    # CÁLCULOS ASTRONÓMICOS
     ts = api.load.timescale()
     eph = api.load('de421.bsp')
     t0 = ts.from_datetime(tz_sv.localize(datetime(anio, mes_id, 1)))
@@ -139,7 +124,6 @@ with tab_mes:
     html_tabla = f"<table><tr><th>D</th><th>L</th><th>M</th><th>M</th><th>J</th><th>V</th><th>S</th></tr>{filas_html}</table>"
     components.html(f"<style>table {{ width: 100%; border-collapse: separate; border-spacing: 0px; color: white; font-family: sans-serif; table-layout: fixed; }} th {{ color: #FF4B4B; padding-bottom: 8px; font-size: 15px; text-align: center; font-weight: bold; }}</style>{html_tabla}", height=500)
 
-    # Simbología Mensual
     st.markdown(f"""
     <div class="info-box">
         <p style="color:#FF8C00; font-weight:bold; margin-bottom:15px; font-size:17px;">Simbología:</p>
@@ -204,6 +188,11 @@ with tab_anio:
 # PIE DE PÁGINA
 st.markdown("""
     <div style="margin-top: 30px; padding: 15px; border-top: 1px solid #333; text-align: center;">
-        <p style="color: #666; font-size: 12px;">Voz de la Tórtola, Nejapa.</p>
+        <p style="color: #666; font-size: 12px; line-height: 1.5;">
+            <b>Respaldo Científico:</b> Los cálculos se generan en tiempo real utilizando Skyfield y efemérides de la NASA. 
+        </p>
+        <p style="color: #888; font-size: 16px; font-style: italic; margin-top: 15px; font-weight: bold;">
+            Voz de la Tórtola, Nejapa.
+        </p>
     </div>
     """, unsafe_allow_html=True)
