@@ -144,7 +144,7 @@ with tab_mes:
 
 with tab_anio:
     anio_full = st.number_input("Seleccionar Año", min_value=2024, max_value=2030, value=hoy_sv.year, key="anio_f", label_visibility="collapsed")
-    st.markdown("<div class='mini-leyenda'>🟧 Borde Naranja: Día de Celebración</div>", unsafe_allow_html=True)
+    st.markdown("<div class='mini-leyenda'>🟧Celebracion Luna Nueva</div>", unsafe_allow_html=True)
 
     grid_html = "<div style='display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px;'>"
     
