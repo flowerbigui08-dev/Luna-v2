@@ -52,19 +52,15 @@ st.markdown("""
         max-width: 250px;
         font-size: 14px;
     }
+    iframe { border: none !important; } /* Elimina bordes raros en el calendario */
     </style>
     """, unsafe_allow_html=True)
 
 st.markdown("<h1>🌙 Calendario Lunar</h1>", unsafe_allow_html=True)
 
-# 2. LÓGICA DE NAVEGACIÓN INFINITA (MESES)
-if 'mes_idx' not in st.session_state:
-    st.session_state.mes_idx = hoy_sv.month
-
-def cambiar_mes():
-    if st.session_state.mes_val > 12: st.session_state.mes_idx = 1
-    elif st.session_state.mes_val < 1: st.session_state.mes_idx = 12
-    else: st.session_state.mes_idx = st.session_state.mes_val
+# 2. LÓGICA DE NAVEGACIÓN INFINITA (CORREGIDA)
+if 'mes_selector' not in st.session_state:
+    st.session_state.mes_selector = hoy_sv.month
 
 # 3. PESTAÑAS
 tab_mes, tab_anio = st.tabs(["📅 Vista Mensual", "🗓️ Año Completo"])
@@ -74,11 +70,19 @@ with tab_mes:
     with col_a:
         anio = st.number_input("Año", min_value=2024, max_value=2030, value=hoy_sv.year, key="anio_m", label_visibility="collapsed")
     with col_m:
-        mes_id = st.number_input("Mes", min_value=0, max_value=13, value=st.session_state.mes_idx, 
-                                 key="mes_val", on_change=cambiar_mes, label_visibility="collapsed")
-        # Ajuste visual del valor mostrado si se sale del rango
-        if mes_id > 12: mes_id = 1
-        elif mes_id < 1: mes_id = 12
+        # El truco para evitar el mes 13:
+        mes_raw = st.number_input("Mes", min_value=0, max_value=13, value=st.session_state.mes_selector, key="mes_input", label_visibility="collapsed")
+        
+        if mes_raw > 12: 
+            st.session_state.mes_selector = 1
+            st.rerun()
+        elif mes_raw < 1: 
+            st.session_state.mes_selector = 12
+            st.rerun()
+        else:
+            st.session_state.mes_selector = mes_raw
+        
+        mes_id = st.session_state.mes_selector
 
     # CÁLCULOS
     ts = api.load.timescale()
@@ -160,8 +164,7 @@ with tab_anio:
     ts = api.load.timescale()
     eph = api.load('de421.bsp')
 
-    # CONTENEDOR GRID: overflow:hidden elimina el movimiento raro interno
-    grid_html = "<div style='display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; overflow: hidden;'>"
+    grid_html = "<div style='display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px;'>"
     
     for m in range(1, 13):
         t0_a = ts.from_datetime(tz_sv.localize(datetime(anio_full, m, 1)))
@@ -187,23 +190,20 @@ with tab_anio:
                 if dia == 0:
                     mes_html += "<td></td>"
                 else:
-                    style = "padding: 3px;"
-                    inner_style = "font-size: 13px; font-weight: 500;"
+                    inner_style = "font-size: 13px; font-weight: 500; padding: 3px;"
                     if dia in celebraciones:
                         inner_style += "border: 1.5px solid #FF8C00; background: rgba(255,140,0,0.25); border-radius: 4px;"
                     if dia == hoy_sv.day and m == hoy_sv.month and anio_full == hoy_sv.year:
                         inner_style += "border: 1.5px solid #00FF7F; background: rgba(0,255,127,0.2); border-radius: 4px;"
                     
-                    mes_html += f"<td style='{style}'><div style='{inner_style}'>{dia}</div></td>"
+                    mes_html += f"<td><div style='{inner_style}'>{dia}</div></td>"
             mes_html += "</tr>"
         mes_html += "</table></div>"
         grid_html += mes_html
     
     grid_html += "</div>"
-    # HEIGHT aumentado y scrolling=False para que se integre a la página principal
-    components.html(f"<style>body{{background:#0e1117; margin:0; overflow:hidden;}}</style>{grid_html}", height=1450, scrolling=False)
+    components.html(f"<style>body{{background:#0e1117; margin:0; padding:0; overflow:hidden;}}</style>{grid_html}", height=1400, scrolling=False)
 
-# 6. PIE DE PÁGINA
 st.markdown("""
     <div style="margin-top: 30px; padding: 15px; border-top: 1px solid #333; text-align: center;">
         <p style="color: #666; font-size: 12px; line-height: 1.5;">
