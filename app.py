@@ -123,7 +123,7 @@ st.markdown(f"""
 <div class="info-box">
     <p style="color:#FF8C00; font-weight:bold; margin-bottom:15px; font-size:17px;">Simbología:</p>
     <div class="info-line"><span class="emoji-size">✅</span> Hoy (Día actual)</div>
-    <div class="info-line"><span class="emoji-size">🌑</span> Luna Nueva</div>
+    <div class="info-line"><span class="emoji-size">🌑</span> Conjuncion</div>
     <div class="info-line"><span class="emoji-size">🌘</span> Día de Celebración</div>
     <div class="info-line"><span class="emoji-size">🌸</span> Primavera (Marzo)</div>
     <div class="info-line"><span class="emoji-size">🌕</span> Luna Llena</div>
