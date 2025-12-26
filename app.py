@@ -57,14 +57,15 @@ st.markdown("""
 
 st.markdown("<h1>🌙 Calendario Lunar</h1>", unsafe_allow_html=True)
 
-# 2. LÓGICA DE NAVEGACIÓN INFINITA (MESES)
+# 2. LÓGICA DE NAVEGACIÓN INFINITA (CORREGIDA)
 if 'mes_idx' not in st.session_state:
     st.session_state.mes_idx = hoy_sv.month
 
 def cambiar_mes():
-    if st.session_state.mes_val > 12: st.session_state.mes_idx = 1
-    elif st.session_state.mes_val < 1: st.session_state.mes_idx = 12
-    else: st.session_state.mes_idx = st.session_state.mes_val
+    val = st.session_state.mes_selector
+    if val > 12: st.session_state.mes_idx = 1
+    elif val < 1: st.session_state.mes_idx = 12
+    else: st.session_state.mes_idx = val
 
 # 3. PESTAÑAS
 tab_mes, tab_anio = st.tabs(["📅 Vista Mensual", "🗓️ Año Completo"])
@@ -74,8 +75,13 @@ with tab_mes:
     with col_a:
         anio = st.number_input("Año", min_value=2024, max_value=2030, value=hoy_sv.year, key="anio_m", label_visibility="collapsed")
     with col_m:
-        mes_id_input = st.number_input("Mes", min_value=0, max_value=13, value=st.session_state.mes_idx, 
-                                       key="mes_val", on_change=cambiar_mes, label_visibility="collapsed")
+        # Usamos mes_idx como el valor real, y el selector solo para capturar el clic
+        mes_id = st.number_input("Mes", min_value=0, max_value=13, 
+                                 value=st.session_state.mes_idx, 
+                                 key="mes_selector", 
+                                 on_change=cambiar_mes, 
+                                 label_visibility="collapsed")
+        # Forzamos que la variable mes_id siempre sea el valor real del session_state
         mes_id = st.session_state.mes_idx
 
     # CÁLCULOS LUNARES
@@ -133,6 +139,7 @@ with tab_mes:
     html_tabla = f"<table><tr><th>D</th><th>L</th><th>M</th><th>M</th><th>J</th><th>V</th><th>S</th></tr>{filas_html}</table>"
     components.html(f"<style>table {{ width: 100%; border-collapse: separate; border-spacing: 0px; color: white; font-family: sans-serif; table-layout: fixed; }} th {{ color: #FF4B4B; padding-bottom: 8px; font-size: 15px; text-align: center; font-weight: bold; }}</style>{html_tabla}", height=500)
 
+    # Simbología Mensual
     st.markdown(f"""
     <div class="info-box">
         <p style="color:#FF8C00; font-weight:bold; margin-bottom:15px; font-size:17px;">Simbología:</p>
@@ -192,7 +199,6 @@ with tab_anio:
         grid_html += mes_html
     
     grid_html += "</div>"
-    # HEIGHT ajustado para que quepan los 12 meses y scrolling=False para quitar el cuadro interno
     components.html(f"<style>body{{background:#0e1117; margin:0; padding-bottom:50px;}}</style>{grid_html}", height=1450, scrolling=False)
 
 # PIE DE PÁGINA
