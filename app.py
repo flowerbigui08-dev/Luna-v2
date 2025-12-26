@@ -19,7 +19,6 @@ st.markdown("""
     <style>
     .main { background-color: #0e1117; }
     h1 { text-align: center; color: white; margin-bottom: 0px; font-size: 28px; }
-    .label-naranja { color: #FF8C00; text-align: center; font-weight: bold; font-size: 20px; margin-top: 15px; }
     div[data-testid="stNumberInput"] { width: 160px !important; margin: 0 auto !important; }
     input { font-size: 22px !important; text-align: center !important; font-weight: bold !important; }
     
@@ -42,7 +41,6 @@ st.markdown("""
     .info-line { color: white; font-size: 15px; margin-bottom: 10px; display: flex; align-items: center; }
     .emoji-size { font-size: 22px; margin-right: 15px; width: 30px; text-align: center; }
     
-    /* Estilo para la leyenda mini de la vista anual */
     .mini-leyenda {
         text-align: center;
         background: rgba(255, 140, 0, 0.1);
@@ -59,14 +57,30 @@ st.markdown("""
 
 st.markdown("<h1>🌙 Calendario Lunar</h1>", unsafe_allow_html=True)
 
-# 2. SELECTORES Y PESTAÑAS
+# 2. LÓGICA DE NAVEGACIÓN INFINITA (MESES)
+if 'mes_idx' not in st.session_state:
+    st.session_state.mes_idx = hoy_sv.month
+
+def cambiar_mes():
+    if st.session_state.mes_val > 12: st.session_state.mes_idx = 1
+    elif st.session_state.mes_val < 1: st.session_state.mes_idx = 12
+    else: st.session_state.mes_idx = st.session_state.mes_val
+
+# 3. PESTAÑAS
 tab_mes, tab_anio = st.tabs(["📅 Vista Mensual", "🗓️ Año Completo"])
 
 with tab_mes:
-    anio = st.number_input("Año", min_value=2024, max_value=2030, value=hoy_sv.year, key="anio_m", label_visibility="collapsed")
-    mes_id = st.number_input("Mes", min_value=1, max_value=12, value=hoy_sv.month, key="mes_m", label_visibility="collapsed")
+    col_a, col_m = st.columns(2)
+    with col_a:
+        anio = st.number_input("Año", min_value=2024, max_value=2030, value=hoy_sv.year, key="anio_m", label_visibility="collapsed")
+    with col_m:
+        mes_id = st.number_input("Mes", min_value=0, max_value=13, value=st.session_state.mes_idx, 
+                                 key="mes_val", on_change=cambiar_mes, label_visibility="collapsed")
+        # Ajuste visual del valor mostrado si se sale del rango
+        if mes_id > 12: mes_id = 1
+        elif mes_id < 1: mes_id = 12
 
-    # CÁLCULOS MENSUALES
+    # CÁLCULOS
     ts = api.load.timescale()
     eph = api.load('de421.bsp')
     t0 = ts.from_datetime(tz_sv.localize(datetime(anio, mes_id, 1)))
@@ -121,7 +135,6 @@ with tab_mes:
     html_tabla = f"<table><tr><th>D</th><th>L</th><th>M</th><th>M</th><th>J</th><th>V</th><th>S</th></tr>{filas_html}</table>"
     components.html(f"<style>table {{ width: 100%; border-collapse: separate; border-spacing: 0px; color: white; font-family: sans-serif; table-layout: fixed; }} th {{ color: #FF4B4B; padding-bottom: 8px; font-size: 15px; text-align: center; font-weight: bold; }}</style>{html_tabla}", height=500)
 
-    # Simbología Mensual Completa
     st.markdown(f"""
     <div class="info-box">
         <p style="color:#FF8C00; font-weight:bold; margin-bottom:15px; font-size:17px;">Simbología:</p>
@@ -142,15 +155,13 @@ with tab_mes:
 
 with tab_anio:
     anio_full = st.number_input("Seleccionar Año", min_value=2024, max_value=2030, value=hoy_sv.year, key="anio_f", label_visibility="collapsed")
-    
-    # Leyenda reducida solo para la vista anual
     st.markdown("<div class='mini-leyenda'>🟧 Borde Naranja: Día de Celebración</div>", unsafe_allow_html=True)
 
     ts = api.load.timescale()
     eph = api.load('de421.bsp')
 
-    # Usamos grid de 2 columnas para que quepan todos los meses hacia abajo
-    grid_html = "<div style='display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; padding-bottom: 50px;'>"
+    # CONTENEDOR GRID: overflow:hidden elimina el movimiento raro interno
+    grid_html = "<div style='display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; overflow: hidden;'>"
     
     for m in range(1, 13):
         t0_a = ts.from_datetime(tz_sv.localize(datetime(anio_full, m, 1)))
@@ -177,7 +188,7 @@ with tab_anio:
                     mes_html += "<td></td>"
                 else:
                     style = "padding: 3px;"
-                    inner_style = "font-size: 13px; font-weight: 500;" # Números un poquito más grandes
+                    inner_style = "font-size: 13px; font-weight: 500;"
                     if dia in celebraciones:
                         inner_style += "border: 1.5px solid #FF8C00; background: rgba(255,140,0,0.25); border-radius: 4px;"
                     if dia == hoy_sv.day and m == hoy_sv.month and anio_full == hoy_sv.year:
@@ -189,10 +200,10 @@ with tab_anio:
         grid_html += mes_html
     
     grid_html += "</div>"
-    # Aumenté el height a 1200 para que en móvil se desplace bien y se vean todos los meses
-    components.html(f"<style>body{{background:#0e1117; margin:0;}}</style>{grid_html}", height=1200, scrolling=True)
+    # HEIGHT aumentado y scrolling=False para que se integre a la página principal
+    components.html(f"<style>body{{background:#0e1117; margin:0; overflow:hidden;}}</style>{grid_html}", height=1450, scrolling=False)
 
-# 6. PIE DE PÁGINA (Siempre visible)
+# 6. PIE DE PÁGINA
 st.markdown("""
     <div style="margin-top: 30px; padding: 15px; border-top: 1px solid #333; text-align: center;">
         <p style="color: #666; font-size: 12px; line-height: 1.5;">
