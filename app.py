@@ -23,7 +23,6 @@ st.markdown("""
     div[data-testid="stNumberInput"] { width: 160px !important; margin: 0 auto !important; }
     input { font-size: 22px !important; text-align: center !important; font-weight: bold !important; }
     
-    /* Estilo para las pestañas */
     .stTabs [data-baseweb="tab-list"] { gap: 10px; justify-content: center; }
     .stTabs [data-baseweb="tab"] { 
         background-color: #1a1a1a; 
@@ -42,6 +41,19 @@ st.markdown("""
     }
     .info-line { color: white; font-size: 15px; margin-bottom: 10px; display: flex; align-items: center; }
     .emoji-size { font-size: 22px; margin-right: 15px; width: 30px; text-align: center; }
+    
+    /* Estilo para la leyenda mini de la vista anual */
+    .mini-leyenda {
+        text-align: center;
+        background: rgba(255, 140, 0, 0.1);
+        border: 1px solid #FF8C00;
+        padding: 10px;
+        border-radius: 10px;
+        color: white;
+        margin: 10px auto;
+        max-width: 250px;
+        font-size: 14px;
+    }
     </style>
     """, unsafe_allow_html=True)
 
@@ -109,37 +121,54 @@ with tab_mes:
     html_tabla = f"<table><tr><th>D</th><th>L</th><th>M</th><th>M</th><th>J</th><th>V</th><th>S</th></tr>{filas_html}</table>"
     components.html(f"<style>table {{ width: 100%; border-collapse: separate; border-spacing: 0px; color: white; font-family: sans-serif; table-layout: fixed; }} th {{ color: #FF4B4B; padding-bottom: 8px; font-size: 15px; text-align: center; font-weight: bold; }}</style>{html_tabla}", height=500)
 
+    # Simbología Mensual Completa
+    st.markdown(f"""
+    <div class="info-box">
+        <p style="color:#FF8C00; font-weight:bold; margin-bottom:15px; font-size:17px;">Simbología:</p>
+        <div class="info-line"><span class="emoji-size">✅</span> Hoy (Día actual)</div>
+        <div class="info-line"><span class="emoji-size">🌑</span> Conjunción</div>
+        <div class="info-line"><span class="emoji-size">🌘</span> Día de Celebración</div>
+        <div class="info-line"><span class="emoji-size">🌸</span> Primavera (Marzo)</div>
+        <div class="info-line"><span class="emoji-size">🌕</span> Luna Llena</div>
+    </div>
+    <div class="info-box">
+        <p style="color:#FF8C00; font-weight:bold; margin-bottom:12px; font-size:17px;">Próxima Conjunción:</p>
+        <p style="color:#aaa; font-size:14px; margin-bottom:4px;">📍 El Salvador (SV):</p>
+        <p style="color:white; font-size:16px; font-weight:bold; margin-bottom:12px;">{info_sv}</p>
+        <p style="color:#aaa; font-size:14px; margin-bottom:4px;">🌍 Tiempo Universal (UTC):</p>
+        <p style="color:white; font-size:16px; font-weight:bold;">{info_utc}</p>
+    </div>
+    """, unsafe_allow_html=True)
+
 with tab_anio:
     anio_full = st.number_input("Seleccionar Año", min_value=2024, max_value=2030, value=hoy_sv.year, key="anio_f", label_visibility="collapsed")
     
-    # Generar cuadrícula de 12 meses (3 columnas x 4 filas)
-    col1, col2 = st.columns(2) # En móvil es mejor 2 columnas o 1
-    
+    # Leyenda reducida solo para la vista anual
+    st.markdown("<div class='mini-leyenda'>🟧 Borde Naranja: Día de Celebración</div>", unsafe_allow_html=True)
+
     ts = api.load.timescale()
     eph = api.load('de421.bsp')
 
-    grid_html = "<div style='display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px;'>"
+    # Usamos grid de 2 columnas para que quepan todos los meses hacia abajo
+    grid_html = "<div style='display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; padding-bottom: 50px;'>"
     
     for m in range(1, 13):
-        # Calcular conjunciones del mes para marcar celebraciones
         t0_a = ts.from_datetime(tz_sv.localize(datetime(anio_full, m, 1)))
         ultimo_a = calendar.monthrange(anio_full, m)[1]
         t1_a = ts.from_datetime(tz_sv.localize(datetime(anio_full, m, ultimo_a, 23, 59)))
         t_f, y_f = almanac.find_discrete(t0_a, t1_a, almanac.moon_phases(eph))
         
-        # Guardar días de celebración (día después de Luna Nueva)
         celebraciones = []
         for ti, yi in zip(t_f, y_f):
-            if yi == 0: # Luna Nueva
+            if yi == 0: 
                 dt = ti.astimezone(tz_sv)
                 target = dt.day + 1 if dt.hour < 18 else dt.day + 2
                 if target <= ultimo_a: celebraciones.append(target)
 
-        # Crear HTML de cada mes chiquito
-        mes_html = f"<div style='background:#1a1a1a; padding:8px; border-radius:8px; border:1px solid #333;'>"
-        mes_html += f"<div style='color:#FF8C00; font-weight:bold; font-size:14px; text-align:center; margin-bottom:5px;'>{meses_completos[m-1]}</div>"
-        mes_html += "<table style='width:100%; font-size:10px; text-align:center; color:white; border-collapse:collapse;'>"
-        mes_html += "<tr style='color:#FF4B4B;'><td>D</td><td>L</td><td>M</td><td>M</td><td>J</td><td>V</td><td>S</td></tr>"
+        mes_html = f"<div style='background:#1a1a1a; padding:10px; border-radius:10px; border:1px solid #333;'>"
+        mes_html += f"<div style='color:#FF8C00; font-weight:bold; font-size:16px; text-align:center; margin-bottom:8px;'>{meses_completos[m-1]}</div>"
+        mes_html += "<table style='width:100%; font-size:12px; text-align:center; color:white; border-collapse:collapse;'>"
+        mes_html += "<tr style='color:#FF4B4B; font-weight:bold;'><td>D</td><td>L</td><td>M</td><td>M</td><td>J</td><td>V</td><td>S</td></tr>"
         
         for semana in calendar.Calendar(6).monthdayscalendar(anio_full, m):
             mes_html += "<tr>"
@@ -147,47 +176,30 @@ with tab_anio:
                 if dia == 0:
                     mes_html += "<td></td>"
                 else:
-                    style = ""
+                    style = "padding: 3px;"
+                    inner_style = "font-size: 13px; font-weight: 500;" # Números un poquito más grandes
                     if dia in celebraciones:
-                        style = "border: 1px solid #FF8C00; background: rgba(255,140,0,0.2); border-radius: 3px;"
+                        inner_style += "border: 1.5px solid #FF8C00; background: rgba(255,140,0,0.25); border-radius: 4px;"
                     if dia == hoy_sv.day and m == hoy_sv.month and anio_full == hoy_sv.year:
-                        style = "border: 1px solid #00FF7F; background: rgba(0,255,127,0.2); border-radius: 3px;"
+                        inner_style += "border: 1.5px solid #00FF7F; background: rgba(0,255,127,0.2); border-radius: 4px;"
                     
-                    mes_html += f"<td style='padding:2px;'><div style='{style}'>{dia}</div></td>"
+                    mes_html += f"<td style='{style}'><div style='{inner_style}'>{dia}</div></td>"
             mes_html += "</tr>"
         mes_html += "</table></div>"
         grid_html += mes_html
     
     grid_html += "</div>"
-    components.html(f"<style>body{{background:#0e1117;}}</style>{grid_html}", height=800)
+    # Aumenté el height a 1200 para que en móvil se desplace bien y se vean todos los meses
+    components.html(f"<style>body{{background:#0e1117; margin:0;}}</style>{grid_html}", height=1200, scrolling=True)
 
-# 5. LEYENDA Y DATOS (Se muestran siempre abajo)
-st.markdown(f"""
-<div class="info-box">
-    <p style="color:#FF8C00; font-weight:bold; margin-bottom:15px; font-size:17px;">Simbología:</p>
-    <div class="info-line"><span class="emoji-size">✅</span> Hoy (Día actual)</div>
-    <div class="info-line"><span class="emoji-size">🌑</span> Conjunción</div>
-    <div class="info-line"><span class="emoji-size">🌘</span> Día de Celebración</div>
-    <div class="info-line"><span class="emoji-size">🌸</span> Primavera (Marzo)</div>
-    <div class="info-line"><span class="emoji-size">🌕</span> Luna Llena</div>
-</div>
-
-<div class="info-box">
-    <p style="color:#FF8C00; font-weight:bold; margin-bottom:12px; font-size:17px;">Próxima Conjunción:</p>
-    <p style="color:#aaa; font-size:14px; margin-bottom:4px;">📍 El Salvador (SV):</p>
-    <p style="color:white; font-size:16px; font-weight:bold; margin-bottom:12px;">{info_sv}</p>
-    <p style="color:#aaa; font-size:14px; margin-bottom:4px;">🌍 Tiempo Universal (UTC):</p>
-    <p style="color:white; font-size:16px; font-weight:bold;">{info_utc}</p>
-</div>
-
-<div style="margin-top: 30px; padding: 15px; border-top: 1px solid #333; text-align: center;">
-    <p style="color: #666; font-size: 12px; line-height: 1.5;">
-        <b>Respaldo Científico:</b><br>
-        Los cálculos de este calendario se generan en tiempo real utilizando la biblioteca 
-        <b>Skyfield</b> y las efemérides <b>DE421 del Jet Propulsion Laboratory (JPL) de la NASA</b>. 
-    </p>
-    <p style="color: #888; font-size: 16px; font-style: italic; margin-top: 15px; font-weight: bold;">
-        Voz de la Tórtola, Nejapa.
-    </p>
-</div>
-""", unsafe_allow_html=True)
+# 6. PIE DE PÁGINA (Siempre visible)
+st.markdown("""
+    <div style="margin-top: 30px; padding: 15px; border-top: 1px solid #333; text-align: center;">
+        <p style="color: #666; font-size: 12px; line-height: 1.5;">
+            <b>Respaldo Científico:</b> Los cálculos se generan en tiempo real utilizando la biblioteca Skyfield y efemérides de la NASA. 
+        </p>
+        <p style="color: #888; font-size: 16px; font-style: italic; margin-top: 15px; font-weight: bold;">
+            Voz de la Tórtola, Nejapa.
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
