@@ -52,15 +52,19 @@ st.markdown("""
         max-width: 250px;
         font-size: 14px;
     }
-    iframe { border: none !important; } /* Elimina bordes raros en el calendario */
     </style>
     """, unsafe_allow_html=True)
 
 st.markdown("<h1>🌙 Calendario Lunar</h1>", unsafe_allow_html=True)
 
-# 2. LÓGICA DE NAVEGACIÓN INFINITA (CORREGIDA)
-if 'mes_selector' not in st.session_state:
-    st.session_state.mes_selector = hoy_sv.month
+# 2. LÓGICA DE NAVEGACIÓN INFINITA (MESES)
+if 'mes_idx' not in st.session_state:
+    st.session_state.mes_idx = hoy_sv.month
+
+def cambiar_mes():
+    if st.session_state.mes_val > 12: st.session_state.mes_idx = 1
+    elif st.session_state.mes_val < 1: st.session_state.mes_idx = 12
+    else: st.session_state.mes_idx = st.session_state.mes_val
 
 # 3. PESTAÑAS
 tab_mes, tab_anio = st.tabs(["📅 Vista Mensual", "🗓️ Año Completo"])
@@ -70,21 +74,11 @@ with tab_mes:
     with col_a:
         anio = st.number_input("Año", min_value=2024, max_value=2030, value=hoy_sv.year, key="anio_m", label_visibility="collapsed")
     with col_m:
-        # El truco para evitar el mes 13:
-        mes_raw = st.number_input("Mes", min_value=0, max_value=13, value=st.session_state.mes_selector, key="mes_input", label_visibility="collapsed")
-        
-        if mes_raw > 12: 
-            st.session_state.mes_selector = 1
-            st.rerun()
-        elif mes_raw < 1: 
-            st.session_state.mes_selector = 12
-            st.rerun()
-        else:
-            st.session_state.mes_selector = mes_raw
-        
-        mes_id = st.session_state.mes_selector
+        mes_id_input = st.number_input("Mes", min_value=0, max_value=13, value=st.session_state.mes_idx, 
+                                       key="mes_val", on_change=cambiar_mes, label_visibility="collapsed")
+        mes_id = st.session_state.mes_idx
 
-    # CÁLCULOS
+    # CÁLCULOS LUNARES
     ts = api.load.timescale()
     eph = api.load('de421.bsp')
     t0 = ts.from_datetime(tz_sv.localize(datetime(anio, mes_id, 1)))
@@ -100,7 +94,7 @@ with tab_mes:
     iconos_fases = {0: "🌑", 1: "🌓", 2: "🌕", 3: "🌗"}
 
     filas_html = ""
-    cal = calendar.Calendar(firstweekday=6)
+    cal = calendar.Calendar(6)
 
     for semana in cal.monthdayscalendar(anio, mes_id):
         fila = "<tr>"
@@ -161,9 +155,6 @@ with tab_anio:
     anio_full = st.number_input("Seleccionar Año", min_value=2024, max_value=2030, value=hoy_sv.year, key="anio_f", label_visibility="collapsed")
     st.markdown("<div class='mini-leyenda'>🟧 Borde Naranja: Día de Celebración</div>", unsafe_allow_html=True)
 
-    ts = api.load.timescale()
-    eph = api.load('de421.bsp')
-
     grid_html = "<div style='display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px;'>"
     
     for m in range(1, 13):
@@ -195,22 +186,18 @@ with tab_anio:
                         inner_style += "border: 1.5px solid #FF8C00; background: rgba(255,140,0,0.25); border-radius: 4px;"
                     if dia == hoy_sv.day and m == hoy_sv.month and anio_full == hoy_sv.year:
                         inner_style += "border: 1.5px solid #00FF7F; background: rgba(0,255,127,0.2); border-radius: 4px;"
-                    
                     mes_html += f"<td><div style='{inner_style}'>{dia}</div></td>"
             mes_html += "</tr>"
         mes_html += "</table></div>"
         grid_html += mes_html
     
     grid_html += "</div>"
-    components.html(f"<style>body{{background:#0e1117; margin:0; padding:0; overflow:hidden;}}</style>{grid_html}", height=1400, scrolling=False)
+    # HEIGHT ajustado para que quepan los 12 meses y scrolling=False para quitar el cuadro interno
+    components.html(f"<style>body{{background:#0e1117; margin:0; padding-bottom:50px;}}</style>{grid_html}", height=1450, scrolling=False)
 
+# PIE DE PÁGINA
 st.markdown("""
     <div style="margin-top: 30px; padding: 15px; border-top: 1px solid #333; text-align: center;">
-        <p style="color: #666; font-size: 12px; line-height: 1.5;">
-            <b>Respaldo Científico:</b> Los cálculos se generan en tiempo real utilizando la biblioteca Skyfield y efemérides de la NASA. 
-        </p>
-        <p style="color: #888; font-size: 16px; font-style: italic; margin-top: 15px; font-weight: bold;">
-            Voz de la Tórtola, Nejapa.
-        </p>
+        <p style="color: #666; font-size: 12px;">Voz de la Tórtola, Nejapa.</p>
     </div>
     """, unsafe_allow_html=True)
