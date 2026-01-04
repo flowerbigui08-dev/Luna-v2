@@ -15,21 +15,18 @@ hoy_sv = datetime.now(tz_sv)
 dias_esp = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"]
 meses_completos = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"]
 
-# 2. ESTILOS CSS REFORZADOS
+# 2. ESTILOS CSS AGRESIVOS (Para forzar el cambio visual)
 st.markdown("""
     <style>
-    h1 { text-align: center; color: #FF8C00; }
-    div[data-testid="stNumberInput"] { width: 160px !important; margin: 0 auto !important; }
-    
-    /* Contenedor principal para evitar cortes laterales */
-    .main-container {
-        padding: 10px;
-        max-width: 100%;
-        overflow-x: hidden;
+    /* Forzar que el contenedor principal use todo el espacio sin recortes */
+    .block-container {
+        padding-left: 1rem !important;
+        padding-right: 1rem !important;
     }
-
-    .stTabs [data-baseweb="tab-list"] { justify-content: center; }
     
+    h1 { text-align: center; color: #FF8C00; }
+    
+    /* Estilos de los cuadros informativos */
     .info-box {
         background: rgba(128, 128, 128, 0.1); 
         padding: 15px; 
@@ -72,13 +69,14 @@ with tab_mes:
         elif t_c.month == mes_id:
             fases_dict[t_c.day] = [yi, iconos[yi]]
 
+    # CONSTRUCCIÓN DE LA TABLA (Amarillo Oro con contorno para legibilidad)
     filas_html = ""
     for semana in calendar.Calendar(6).monthdayscalendar(anio, mes_id):
         fila = "<tr>"
         for dia in semana:
             if dia == 0: fila += "<td style='border:none;'></td>"
             else:
-                b_style = "border: 1px solid rgba(128,128,128,0.4); border-radius: 12px; background: rgba(128,128,128,0.05);"
+                b_style = "border: 1px solid rgba(128,128,128,0.4); border-radius: 12px; background: rgba(128,128,128,0.1);"
                 content = ""
                 if dia in fases_dict:
                     tipo, ico = fases_dict[dia]
@@ -89,38 +87,38 @@ with tab_mes:
                     b_style = "border: 2px solid #00FF7F; background: rgba(0,255,127,0.1); border-radius: 12px;"
 
                 fila += f"""
-                <td style='padding:5px; border:none;'>
-                    <div style='{b_style} height:80px; padding:8px; box-sizing:border-box;'>
-                        <div style='color:#FFD700 !important; font-weight:bold; font-size:16px;'>{dia}</div>
-                        <div style='text-align:center; font-size:28px; margin-top:2px;'>{content}</div>
+                <td style='padding:4px; border:none;'>
+                    <div style='{b_style} height:75px; padding:6px; box-sizing:border-box;'>
+                        <div style='color:#FFD700 !important; font-weight:bold; font-size:16px; text-shadow: 1px 1px 2px black;'>{dia}</div>
+                        <div style='text-align:center; font-size:26px;'>{content}</div>
                     </div>
                 </td>"""
         filas_html += fila + "</tr>"
 
     html_mensual = f"""
-    <div style='max-width:98%; margin:auto; font-family:sans-serif;'>
+    <div style='width:100%; font-family:sans-serif;'>
         <h2 style='text-align:center; color:#FF8C00;'>{meses_completos[mes_id-1]} {anio}</h2>
-        <table style='width:100%; border-collapse:collapse; table-layout:fixed;'>
-            <tr style='color:#FF4B4B; text-align:center; font-weight:bold; font-size:16px;'>
+        <table style='width:100%; border-collapse:separate; border-spacing:2px; table-layout:fixed;'>
+            <tr style='color:#FF4B4B; text-align:center; font-weight:bold;'>
                 <td>D</td><td>L</td><td>M</td><td>M</td><td>J</td><td>V</td><td>S</td>
             </tr>
             {filas_html}
         </table>
     </div>
     """
-    components.html(html_mensual, height=550)
+    components.html(html_mensual, height=520)
 
     st.markdown(f"""
     <div class="info-box">
-        <p style="color:#FF8C00; font-weight:bold; font-size:18px; margin-bottom:10px;">Próxima Conjunción:</p>
+        <p style="color:#FF8C00; font-weight:bold; font-size:17px; margin-bottom:10px;">Próxima Conjunción:</p>
         <p style="font-size:16px; margin:0;">📍 El Salvador: <b>{info_sv}</b></p>
     </div>
     """, unsafe_allow_html=True)
 
 with tab_anio:
-    anio_f = st.number_input("Año", 2024, 2030, hoy_sv.year, key="a1")
-    # Grid con margen de seguridad (padding-right) para evitar el "mordisco"
-    grid = "<div style='display:grid; grid-template-columns:1fr 1fr; gap:15px; width:96%; margin:auto; padding-right:10px;'>"
+    anio_f = st.number_input("Seleccionar Año", 2024, 2030, hoy_sv.year, key="a1")
+    # Grid con ancho reducido (94%) para que no toque los bordes de la pantalla
+    grid = "<div style='display:grid; grid-template-columns:1fr 1fr; gap:12px; width:94%; margin: 0 auto; padding-right: 5px;'>"
     for m in range(1, 13):
         t0_a = ts.from_datetime(tz_sv.localize(datetime(anio_f, m, 1)) - timedelta(days=3))
         t1_a = ts.from_datetime(tz_sv.localize(datetime(anio_f, m, calendar.monthrange(anio_f, m)[1], 23, 59)))
@@ -133,9 +131,9 @@ with tab_anio:
                 f_c = dt + timedelta(days=ds)
                 if f_c.month == m: celebs.append(f_c.day)
         
-        m_html = f"<div style='background:rgba(128,128,128,0.1); padding:10px; border-radius:12px; border:1px solid rgba(128,128,128,0.2);'>"
-        m_html += f"<div style='color:#FF8C00; font-weight:bold; text-align:center; margin-bottom:8px;'>{meses_completos[m-1]}</div>"
-        m_html += "<table style='width:100%; font-size:13px; text-align:center; color:white;'>"
+        m_html = f"<div style='background:rgba(128,128,128,0.1); padding:10px; border-radius:10px; border:1px solid rgba(128,128,128,0.2);'>"
+        m_html += f"<div style='color:#FF8C00; font-weight:bold; text-align:center; font-size:15px; margin-bottom:5px;'>{meses_completos[m-1]}</div>"
+        m_html += "<table style='width:100%; font-size:12px; text-align:center; border-collapse:collapse;'>"
         m_html += "<tr style='color:#FF4B4B; font-weight:bold;'><td>D</td><td>L</td><td>M</td><td>M</td><td>J</td><td>V</td><td>S</td></tr>"
         
         for sem in calendar.Calendar(6).monthdayscalendar(anio_f, m):
@@ -143,27 +141,27 @@ with tab_anio:
             for d in sem:
                 if d == 0: m_html += "<td></td>"
                 else:
-                    style = "color:#FFD700 !important; font-weight:bold; padding:4px;"
-                    if d in celebs: style += "border:1.5px solid #FF8C00; background:rgba(255,140,0,0.2); border-radius:6px;"
-                    if d == hoy_sv.day and m == hoy_sv.month and anio_f == hoy_sv.year: style += "border:1.5px solid #00FF7F; border-radius:6px;"
+                    style = "color:#FFD700 !important; font-weight:bold; text-shadow: 1px 1px 1px black;"
+                    if d in celebs: style += "border:1.5px solid #FF8C00; background:rgba(255,140,0,0.2); border-radius:5px;"
+                    if d == hoy_sv.day and m == hoy_sv.month and anio_f == hoy_sv.year: style += "border:1.5px solid #00FF7F; border-radius:5px;"
                     m_html += f"<td><div style='{style}'>{d}</div></td>"
             m_html += "</tr>"
         m_html += "</table></div>"
         grid += m_html
     grid += "</div>"
-    components.html(grid, height=1300)
+    components.html(grid, height=1350)
 
-# 3. PIE DE PÁGINA (Respaldo Científico completo)
+# PIE DE PÁGINA REINSTALADO
 st.markdown("""
-    <hr style="border:0.5px solid rgba(128,128,128,0.3);">
+    <hr style="border:0.1px solid rgba(128,128,128,0.2);">
     <div style="text-align: center; padding: 10px;">
-        <p style="color: grey; font-size: 13px; margin-bottom: 5px;">
+        <p style="color: grey; font-size: 13px;">
             <b>Respaldo Científico:</b> Los cálculos se generan en tiempo real utilizando Skyfield y efemérides de la NASA.
         </p>
-        <p style="color: grey; font-size: 12px; margin-bottom: 15px;">
+        <p style="color: grey; font-size: 12px; margin-top: 5px;">
             Efemérides NASA | Corregido para transiciones.
         </p>
-        <p style="color: #FF8C00; font-size: 18px; font-weight: bold; font-style: italic;">
+        <p style="color: #FF8C00; font-size: 18px; font-weight: bold; font-style: italic; margin-top: 15px;">
             Voz de la Tórtola, Nejapa.
         </p>
     </div>
