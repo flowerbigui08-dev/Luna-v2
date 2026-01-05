@@ -6,17 +6,10 @@ from datetime import datetime, timedelta
 import pytz
 import calendar
 
-# Intentar importar plotly, si no está, avisar al usuario
-try:
-    import plotly.graph_objects as go
-    plotly_disponible = True
-except ImportError:
-    plotly_disponible = False
-
 # 1. CONFIGURACIÓN
 st.set_page_config(page_title="Luna SV", layout="wide")
 tz_sv = pytz.timezone('America/El_Salvador')
-loc_sv = wgs84.latlon(13.7667, -89.2333) # Coordenadas exactas de Nejapa
+loc_sv = wgs84.latlon(13.7667, -89.2333) # Nejapa
 hoy_sv = datetime.now(tz_sv)
 
 dias_esp = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"]
@@ -29,11 +22,18 @@ st.markdown("""
     div[data-testid="stNumberInput"] { width: 150px !important; margin: 0 auto !important; }
     input { pointer-events: none !important; caret-color: transparent !important; text-align: center !important; font-weight: bold !important; }
     .stTabs [data-baseweb="tab-list"] { gap: 10px; justify-content: center; }
+    
     .info-box { background: #1a1c23; padding: 15px; border-radius: 12px; border: 1px solid #333; margin-top: 15px; color: white; }
     .info-line { color: white; font-size: 15px; margin-bottom: 10px; display: flex; align-items: center; }
     .emoji-size { font-size: 22px; margin-right: 15px; width: 30px; text-align: center; }
+    
     .label-conjunction { color: #aaa; font-size: 14px; margin-bottom: 2px; margin-top: 8px; }
     .data-conjunction { color: white; font-size: 16px; font-weight: bold; margin-bottom: 10px; }
+    
+    .sunset-card {
+        background: linear-gradient(145deg, #1a1c23, #252830);
+        padding: 12px; border-radius: 10px; border-left: 4px solid #FF8C00; margin-bottom: 8px;
+    }
     .nasa-footer { margin-top: 30px; padding: 15px; border-top: 1px solid #333; text-align: center; }
     </style>
     """, unsafe_allow_html=True)
@@ -101,44 +101,24 @@ with tab_mes:
     st.markdown(f"<h2 style='text-align:center; color:#FF8C00; margin-top:15px; font-size:22px;'>{meses_completos[mes_id-1]} {anio}</h2>", unsafe_allow_html=True)
     components.html(f"<style>table{{width:100%; border-collapse:collapse; font-family:sans-serif; table-layout:fixed;}} th{{color:#FF4B4B; padding-bottom:5px; text-align:center; font-weight:bold; font-size:14px;}}</style><table><tr><th>D</th><th>L</th><th>M</th><th>M</th><th>J</th><th>V</th><th>S</th></tr>{filas_html}</table>", height=440)
 
-    # --- SECCIÓN DEL GRÁFICO (Protegida) ---
-    if plotly_disponible:
-        try:
-            dias_puntos = [1, 5, 10, 15, 20, 25, ultimo_dia]
-            x_vals = []
-            y_vals = []
-            labels = []
-
-            for d in dias_puntos:
-                t_i = ts.from_datetime(tz_sv.localize(datetime(anio, mes_id, d, 12, 0)))
-                t_f = ts.from_datetime(tz_sv.localize(datetime(anio, mes_id, d, 23, 59)))
-                t_e, y_e = almanac.find_discrete(t_i, t_f, almanac.sunrise_sunset(eph, loc_sv))
-                for ti, yi in zip(t_e, y_e):
-                    if yi == 0: # Ocaso
-                        dt = ti.astimezone(tz_sv)
-                        x_vals.append(d)
-                        y_vals.append(dt.hour + dt.minute/60.0)
-                        labels.append(dt.strftime('%I:%M %p'))
-
-            fig = go.Figure()
-            fig.add_trace(go.Scatter(
-                x=x_vals, y=y_vals, mode='lines+markers',
-                line=dict(color='#FF8C00', width=3),
-                marker=dict(size=8, color='#00FF7F'),
-                text=labels, hoverinfo='text+x'
-            ))
-            fig.update_layout(
-                paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
-                margin=dict(l=10, r=10, t=30, b=10), height=280,
-                title=dict(text="🌅 Puestas de Sol (Ocaso) - Nejapa", font=dict(color='#FF8C00', size=16)),
-                xaxis=dict(title="Día del mes", showgrid=False, tickmode='array', tickvals=dias_puntos, font=dict(color='white')),
-                yaxis=dict(title="Hora (24h)", gridcolor='#333', font=dict(color='white'))
-            )
-            st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
-        except Exception as e:
-            st.warning("No se pudo cargar el gráfico de puestas de sol.")
-    else:
-        st.info("Para ver el gráfico, instala plotly: `pip install plotly`")
+    # --- NUEVA SECCIÓN: PUESTAS DE SOL (SIN LIBRERÍAS EXTRA) ---
+    st.markdown("<div class='info-box'><p style='color:#FF8C00; font-weight:bold; margin-bottom:15px; font-size:17px;'>🌅 Puestas de Sol (Nejapa)</p>", unsafe_allow_html=True)
+    
+    puntos_sol = [1, 10, 20, ultimo_dia]
+    for d in puntos_sol:
+        t_i = ts.from_datetime(tz_sv.localize(datetime(anio, mes_id, d, 12, 0)))
+        t_f = ts.from_datetime(tz_sv.localize(datetime(anio, mes_id, d, 23, 59)))
+        t_e, y_e = almanac.find_discrete(t_i, t_f, almanac.sunrise_sunset(eph, loc_sv))
+        for ti, yi in zip(t_e, y_e):
+            if yi == 0: # Ocaso
+                dt = ti.astimezone(tz_sv)
+                st.markdown(f"""
+                <div class="sunset-card">
+                    <span style="color:#aaa; font-size:13px;">Día {d}:</span><br>
+                    <span style="font-size:18px; font-weight:bold;">{dt.strftime('%I:%M:%p')}</span>
+                </div>
+                """, unsafe_allow_html=True)
+    st.markdown("</div>", unsafe_allow_html=True)
 
     # Cajas de Simbología y Conjunción
     st.markdown(f"""
