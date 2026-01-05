@@ -22,7 +22,6 @@ st.markdown("""
     input { pointer-events: none !important; caret-color: transparent !important; text-align: center !important; font-weight: bold !important; }
     .stTabs [data-baseweb="tab-list"] { gap: 10px; justify-content: center; }
     .info-box { background: #1a1c23; padding: 15px; border-radius: 12px; border: 1px solid #333; margin-top: 15px; color: white; }
-    .info-line { color: white; font-size: 15px; margin-bottom: 10px; display: flex; align-items: center; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -38,47 +37,33 @@ with tab_mes:
     with col_a: anio = st.number_input("Año", 2024, 2030, hoy_sv.year, key="anio_m")
     with col_m: mes_id = st.number_input("Mes", 1, 12, hoy_sv.month, key="mes_m")
 
-    # --- LÓGICA DE CÁLCULO MEJORADA ---
-    # Buscamos desde 3 días antes del inicio del mes para capturar conjunciones del mes pasado
+    # LÓGICA DE CÁLCULO (Con memoria de mes anterior)
     fecha_inicio = tz_sv.localize(datetime(anio, mes_id, 1))
     t0 = ts.from_datetime(fecha_inicio - timedelta(days=3))
     ultimo_dia = calendar.monthrange(anio, mes_id)[1]
     t1 = ts.from_datetime(fecha_inicio + timedelta(days=ultimo_dia))
 
     t_fases, y_fases = almanac.find_discrete(t0, t1, almanac.moon_phases(eph))
-    
     fases_dict = {}
     info_sv, info_utc = "---", "---"
     iconos_fases = {0: "🌑", 1: "🌓", 2: "🌕", 3: "🌗"}
 
     for ti, yi in zip(t_fases, y_fases):
         t_c = ti.astimezone(tz_sv)
-        
-        # Si es Luna Nueva (0), calculamos la Semilla (Celebración)
         if yi == 0:
-            # Info para el cuadro de texto (solo si es la conjunción de este mes o la más cercana)
             if t_c.month == mes_id:
                 info_sv = f"{dias_esp[t_c.weekday()]} {t_c.strftime('%d/%m/%y %I:%M %p')}"
                 t_u = t_c.astimezone(pytz.utc)
                 info_utc = f"{dias_esp[t_u.weekday()]} {t_u.strftime('%d/%m/%y %H:%M')}"
             
-            # Cálculo de la Semilla: +1 día si es antes de las 6pm, +2 si es después
             desplazamiento = 1 if t_c.hour < 18 else 2
             t_celeb = t_c + timedelta(days=desplazamiento)
-            
-            # Guardamos la conjunción si cae en este mes
-            if t_c.month == mes_id:
-                fases_dict[t_c.day] = [0, "🌑"]
-            
-            # Guardamos la celebración si cae en este mes (aunque la conjunción fuera el mes pasado)
-            if t_celeb.month == mes_id:
-                fases_dict[t_celeb.day] = ["CELEB", "🌘"]
-        
-        # Otras fases (Cuartos y Llena)
+            if t_c.month == mes_id: fases_dict[t_c.day] = [0, "🌑"]
+            if t_celeb.month == mes_id: fases_dict[t_celeb.day] = ["CELEB", "🌘"]
         elif t_c.month == mes_id:
             fases_dict[t_c.day] = [yi, iconos_fases[yi]]
 
-    # --- RENDERIZADO ---
+    # Render Mensual
     filas_html = ""
     for semana in calendar.Calendar(6).monthdayscalendar(anio, mes_id):
         fila = "<tr>"
@@ -86,46 +71,33 @@ with tab_mes:
             if dia == 0: fila += "<td></td>"
             else:
                 icons, b_style = "", "border: 1px solid #333; background: #1a1c23; border-radius: 10px; color: white;"
-                
                 if dia in fases_dict:
                     tipo, dibujo = fases_dict[dia]
                     icons = dibujo
-                    if tipo == "CELEB":
-                        b_style = "border: 2px solid #FF8C00; background: #2c1a0a; border-radius: 10px; color: white;"
-                
+                    if tipo == "CELEB": b_style = "border: 2px solid #FF8C00; background: #2c1a0a; border-radius: 10px; color: white;"
                 if dia == hoy_sv.day and mes_id == hoy_sv.month and anio == hoy_sv.year:
                     b_style = "border: 2px solid #00FF7F; background: #0a2c1a; border-radius: 10px; color: white;"
                 
                 fila += f"""<td style='padding:4px;'><div style='{b_style} height: 70px; padding: 6px; box-sizing: border-box;'>
                         <div style='font-weight:bold; font-size:13px;'>{dia}</div>
-                        <div style='font-size:24px; text-align:center; margin-top:2px;'>{icons}</div></div></td>"""
+                        <div style='text-align:center; font-size:24px; margin-top:2px;'>{icons}</div></div></td>"""
         filas_html += fila + "</tr>"
 
     st.markdown(f"<h2 style='text-align:center; color:#FF8C00; margin-top:15px; font-size:22px;'>{meses_completos[mes_id-1]} {anio}</h2>", unsafe_allow_html=True)
-    components.html(f"""
-    <style>
-        table {{ width: 100%; border-collapse: collapse; font-family: sans-serif; table-layout: fixed; }}
-        th {{ color: #FF4B4B; padding-bottom: 5px; text-align: center; font-weight: bold; font-size: 14px; }}
-    </style>
-    <table>
-        <tr><th>D</th><th>L</th><th>M</th><th>M</th><th>J</th><th>V</th><th>S</th></tr>
-        {filas_html}
-    </table>
-    """, height=440)
+    components.html(f"<style>table{{width:100%; border-collapse:collapse; font-family:sans-serif; table-layout:fixed;}} th{{color:#FF4B4B; padding-bottom:5px; text-align:center; font-weight:bold; font-size:14px;}}</style><table><tr><th>D</th><th>L</th><th>M</th><th>M</th><th>J</th><th>V</th><th>S</th></tr>{filas_html}</table>", height=440)
 
     st.markdown(f"""
     <div class="info-box">
         <p style="color:#FF8C00; font-weight:bold; margin-bottom:10px; font-size:17px;">Próxima Conjunción:</p>
-        <p style="color:#aaa; font-size:14px; margin:0;">📍 El Salvador (SV):</p>
-        <p style="font-size:16px; font-weight:bold; margin-bottom:10px;">{info_sv}</p>
-        <p style="color:#aaa; font-size:14px; margin:0;">🌍 Tiempo UTC:</p>
-        <p style="font-size:16px; font-weight:bold;">{info_utc}</p>
+        <p style="color:white; font-size:16px; font-weight:bold; margin-bottom:10px;">{info_sv}</p>
+        <p style="color:#aaa; font-size:14px; margin:0;">UTC: {info_utc}</p>
     </div>
     """, unsafe_allow_html=True)
 
 with tab_anio:
     anio_full = st.number_input("Año Completo", 2024, 2030, hoy_sv.year, key="anio_f")
-    grid_html = "<div style='display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px;'>"
+    # SUBIMOS LA ALTURA A 1200 PARA EVITAR EL CORTE EN DICIEMBRE
+    grid_html = "<div style='display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; padding-bottom: 20px;'>"
     for m in range(1, 13):
         f_ini = tz_sv.localize(datetime(anio_full, m, 1))
         t0_a = ts.from_datetime(f_ini - timedelta(days=3))
@@ -156,6 +128,8 @@ with tab_anio:
                     mes_html += f"<td><div style='{estilo}'>{d}</div></td>"
             mes_html += "</tr>"
         grid_html += mes_html + "</table></div>"
-    components.html(grid_html + "</div>", height=1000)
+    
+    # SE AGREGA UN CONTENEDOR FINAL PARA ASEGURAR ESPACIO
+    components.html(grid_html + "</div>", height=1150, scrolling=True)
 
 st.markdown("<div style='text-align: center; margin-top: 20px;'><p style='color: #888; font-size: 16px; font-weight: bold; font-style: italic;'>Voz de la Tórtola, Nejapa.</p></div>", unsafe_allow_html=True)
