@@ -15,17 +15,34 @@ hoy_sv = datetime.now(tz_sv)
 dias_esp = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"]
 meses_completos = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"]
 
-# COLOR GRIS ELEGANTE SELECCIONADO
-color_gris_elegante = "#2c303c"
+# COLOR GRIS TRANSLÚCIDO (Efecto Cristal)
+color_transparente = "rgba(128, 128, 128, 0.2)"
+borde_sutil = "rgba(255, 255, 255, 0.1)"
 
 # 2. ESTILOS CSS
 st.markdown(f"""
     <style>
     h1 {{ text-align: center; color: #FF8C00; font-size: 28px; }}
     .stTabs [data-baseweb="tab-list"] {{ justify-content: center; }}
-    .info-box {{
-        padding: 15px; border-radius: 12px; border: 1px solid rgba(128,128,128,0.3); 
-        margin-top: 15px; background: rgba(128,128,128,0.1);
+    
+    .info-box-v6 {{
+        padding: 15px; border-radius: 12px; 
+        border: 1px solid {borde_sutil}; 
+        margin-top: 15px; 
+        background: {color_transparente};
+        backdrop-filter: blur(10px); /* Efecto de desenfoque */
+    }}
+    .linea-simbolo {{
+        display: flex;
+        align-items: center;
+        margin-bottom: 8px;
+        font-size: 15px;
+    }}
+    .emoji-guia {{
+        width: 30px;
+        font-size: 20px;
+        margin-right: 10px;
+        text-align: center;
     }}
     </style>
     """, unsafe_allow_html=True)
@@ -39,8 +56,8 @@ eph = api.load('de421.bsp')
 
 with tab_mes:
     c1, c2 = st.columns(2)
-    with c1: anio = st.number_input("Año", 2024, 2030, hoy_sv.year, key="y_elegance")
-    with c2: mes_id = st.number_input("Mes", 1, 12, hoy_sv.month, key="m_elegance")
+    with c1: anio = st.number_input("Año", 2024, 2030, hoy_sv.year, key="y_glass")
+    with c2: mes_id = st.number_input("Mes", 1, 12, hoy_sv.month, key="m_glass")
 
     t0 = ts.from_datetime(tz_sv.localize(datetime(anio, mes_id, 1)) - timedelta(days=3))
     t1 = ts.from_datetime(tz_sv.localize(datetime(anio, mes_id, calendar.monthrange(anio, mes_id)[1], 23, 59)))
@@ -70,15 +87,15 @@ with tab_mes:
         for dia in semana:
             if dia == 0: fila += "<td></td>"
             else:
-                ico, b_style = "", f"border: 1px solid #4a4e5a; background: {color_gris_elegante};"
+                ico, b_style = "", f"border: 1px solid {borde_sutil}; background: {color_transparente};"
                 if dia in fases_dict:
                     tipo, dibujo = fases_dict[dia]
                     ico = dibujo
-                    if tipo == "CELEB": b_style = f"border: 2px solid #FF8C00; background: #3d2b1f;"
+                    if tipo == "CELEB": b_style = f"border: 2px solid #FF8C00; background: rgba(255, 140, 0, 0.15);"
                 if dia == hoy_sv.day and mes_id == hoy_sv.month and anio == hoy_sv.year:
-                    b_style = f"border: 2px solid #00FF7F; background: #243d30;"
+                    b_style = f"border: 2px solid #00FF7F; background: rgba(0, 255, 127, 0.1);"
 
-                fila += f"""<td style='padding:4px;'><div style='{b_style} height:70px; border-radius:10px; padding:6px; box-sizing:border-box;'>
+                fila += f"""<td style='padding:4px;'><div style='{b_style} height:70px; border-radius:10px; padding:6px; box-sizing:border-box; backdrop-filter: blur(5px);'>
                         <div style='color:white; font-weight:bold; font-size:14px;'>{dia}</div>
                         <div style='text-align:center; font-size:24px;'>{ico}</div></div></td>"""
         filas_html += fila + "</tr>"
@@ -92,20 +109,24 @@ with tab_mes:
         </table>
     </div>""", height=460)
 
+    # 3. SIMBOLOGÍA EN LISTA VERTICAL (Uno sobre otro)
     st.markdown(f"""
-    <div class="info-box">
-        <p style="color:#FF8C00; font-weight:bold; margin-bottom:10px;">Simbología:</p>
-        <p style="margin:0; font-size:15px;">✅ Hoy | 🌑 Conjunción | 🌘 Celebración | 🌕 Luna Llena</p>
+    <div class="info-box-v6">
+        <p style="color:#FF8C00; font-weight:bold; margin-bottom:12px; font-size:17px;">Simbología:</p>
+        <div class="linea-simbolo"><span class="emoji-guia">✅</span> Hoy (Día actual)</div>
+        <div class="linea-simbolo"><span class="emoji-guia">🌑</span> Conjunción (Luna Nueva)</div>
+        <div class="linea-simbolo"><span class="emoji-guia">🌘</span> Día de Celebración</div>
+        <div class="linea-simbolo"><span class="emoji-guia">🌕</span> Luna Llena</div>
     </div>
-    <div class="info-box">
-        <p style="color:#FF8C00; font-weight:bold; margin-bottom:8px;">Próxima Conjunción:</p>
+    <div class="info-box-v6">
+        <p style="color:#FF8C00; font-weight:bold; margin-bottom:10px; font-size:17px;">Próxima Conjunción:</p>
         <p style="margin:0; font-size:16px;">📍 El Salvador: <b>{info_sv}</b></p>
         <p style="margin:5px 0 0 0; font-size:14px; opacity:0.8;">🌍 Tiempo UTC: <b>{info_utc}</b></p>
     </div>
     """, unsafe_allow_html=True)
 
 with tab_anio:
-    anio_f = st.number_input("Año", 2024, 2030, hoy_sv.year, key="a_elegance", label_visibility="collapsed")
+    anio_f = st.number_input("Año", 2024, 2030, hoy_sv.year, key="a_glass", label_visibility="collapsed")
     grid_h = "<div style='display:grid; grid-template-columns:1fr 1fr; gap:8px; width:94%; margin:auto;'>"
     for m in range(1, 13):
         t0_a = ts.from_datetime(tz_sv.localize(datetime(anio_f, m, 1)) - timedelta(days=3))
@@ -119,7 +140,7 @@ with tab_anio:
                 fc = dt + timedelta(days=ds)
                 if fc.month == m: cs.append(fc.day)
 
-        m_h = f"<div style='background:{color_gris_elegante}; padding:8px; border-radius:8px; border:1px solid #4a4e5a;'>"
+        m_h = f"<div style='background:{color_transparente}; padding:8px; border-radius:8px; border:1px solid {borde_sutil}; backdrop-filter: blur(5px);'>"
         m_h += f"<div style='color:#FF8C00; font-weight:bold; text-align:center; font-size:14px; margin-bottom:3px;'>{meses_completos[m-1]}</div>"
         m_h += "<table style='width:100%; font-size:11px; text-align:center; color:white;'>"
         m_h += "<tr style='color:#FF4B4B;'><td>D</td><td>L</td><td>M</td><td>M</td><td>J</td><td>V</td><td>S</td></tr>"
@@ -129,15 +150,15 @@ with tab_anio:
                 if d == 0: m_h += "<td></td>"
                 else:
                     style = "color:white; font-weight:bold;"
-                    if d in cs: style += "border:1px solid #FF8C00; background:rgba(255,140,0,0.25); border-radius:3px;"
+                    if d in cs: style += f"border:1px solid #FF8C00; background:rgba(255,140,0,0.2); border-radius:3px;"
                     if d == hoy_sv.day and m == hoy_sv.month and anio_f == hoy_sv.year: style += "border:1px solid #00FF7F; border-radius:3px;"
                     m_h += f"<td><div style='{style}'>{d}</div></td>"
             m_h += "</tr>"
         grid_h += m_h + "</table></div>"
     components.html(grid_h + "</div>", height=1050)
 
-st.markdown("""
-    <hr style="border:0.1px solid rgba(128,128,128,0.2); margin-top:20px;">
+st.markdown(f"""
+    <hr style="border:0.1px solid {borde_sutil}; margin-top:20px;">
     <div style="text-align: center; padding-bottom: 20px;">
         <p style="color: grey; font-size: 13px;">Respaldo Científico: Skyfield & NASA Ephemeris.</p>
         <p style="color: #FF8C00; font-size: 20px; font-weight: bold; font-style: italic;">Voz de la Tórtola, Nejapa.</p>
