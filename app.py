@@ -17,12 +17,30 @@ meses_completos = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio
 
 color_gris = "#2c303c"
 
+# MANEJO DE ESTADO PARA LOS BOTONES (Evita que salte el teclado)
+if 'anio_val' not in st.session_state:
+    st.session_state.anio_val = hoy_sv.year
+if 'mes_val' not in st.session_state:
+    st.session_state.mes_val = hoy_sv.month
+
 # 2. ESTILOS CSS
 st.markdown(f"""
     <style>
-    h1 {{ text-align: center; color: #FF8C00; font-size: 28px; }}
+    h1 {{ text-align: center; color: #FF8C00; font-size: 28px; margin-bottom: 20px; }}
     .stTabs [data-baseweb="tab-list"] {{ justify-content: center; }}
-    .info-box-v9 {{
+    
+    /* Contenedor de Botones Estilo Stepper */
+    .stepper-cont {{
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: {color_gris};
+        border-radius: 12px;
+        padding: 5px;
+        border: 1px solid rgba(255,255,255,0.1);
+    }}
+    
+    .info-box-final {{
         padding: 15px; border-radius: 12px; 
         border: 1px solid rgba(128, 128, 128, 0.3); 
         margin-top: 15px; 
@@ -31,9 +49,6 @@ st.markdown(f"""
     }}
     .linea-simbolo {{ display: flex; align-items: center; margin-bottom: 10px; font-size: 16px; }}
     .emoji-guia {{ width: 35px; font-size: 26px; margin-right: 12px; text-align: center; }}
-    
-    /* Ocultar el label de los selectores para que se vea más limpio */
-    div[data-testid="stSelectbox"] label {{ display: none; }}
     </style>
     """, unsafe_allow_html=True)
 
@@ -45,15 +60,29 @@ ts = api.load.timescale()
 eph = api.load('de421.bsp')
 
 with tab_mes:
-    c1, c2 = st.columns(2)
-    # CAMBIO A SELECTBOX PARA EVITAR EL TECLADO
-    with c1: 
-        anios_lista = list(range(2024, 2031))
-        anio = st.selectbox("Año", anios_lista, index=anios_lista.index(hoy_sv.year), key="y_v9")
-    with c2: 
-        mes_id = st.selectbox("Mes", list(range(1, 13)), index=hoy_sv.month-1, key="m_v9")
+    # FILA DE BOTONES PERSONALIZADOS
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.write("📅 Año")
+        ca1, ca2, ca3 = st.columns([1,2,1])
+        if ca1.button("➖", key="dec_a"): st.session_state.anio_val -= 1
+        ca2.markdown(f"<div class='stepper-cont'><b>{st.session_state.anio_val}</b></div>", unsafe_allow_html=True)
+        if ca3.button("➕", key="inc_a"): st.session_state.anio_val += 1
+        
+    with col2:
+        st.write("📆 Mes")
+        cm1, cm2, cm3 = st.columns([1,2,1])
+        if cm1.button("➖", key="dec_m"):
+            if st.session_state.mes_val > 1: st.session_state.mes_val -= 1
+        cm2.markdown(f"<div class='stepper-cont'><b>{meses_completos[st.session_state.mes_val-1]}</b></div>", unsafe_allow_html=True)
+        if cm3.button("➕", key="inc_m"):
+            if st.session_state.mes_val < 12: st.session_state.mes_val += 1
 
-    # (Cálculos de fase lunar - se mantienen igual)
+    anio = st.session_state.anio_val
+    mes_id = st.session_state.mes_val
+
+    # Cálculos astronómicos
     t0 = ts.from_datetime(tz_sv.localize(datetime(anio, mes_id, 1)) - timedelta(days=3))
     t1 = ts.from_datetime(tz_sv.localize(datetime(anio, mes_id, calendar.monthrange(anio, mes_id)[1], 23, 59)))
     t_f, y_f = almanac.find_discrete(t0, t1, almanac.moon_phases(eph))
@@ -76,6 +105,7 @@ with tab_mes:
         elif t_c.month == mes_id:
             fases_dict[t_c.day] = [yi, iconos[yi]]
 
+    # Tabla del Calendario
     filas_html = ""
     for semana in calendar.Calendar(6).monthdayscalendar(anio, mes_id):
         fila = "<tr>"
@@ -97,22 +127,22 @@ with tab_mes:
 
     components.html(f"""
     <div style='font-family:sans-serif;'>
-        <h3 style='text-align:center; color:#FF8C00;'>{meses_completos[mes_id-1]} {anio}</h3>
         <table style='width:100%; table-layout:fixed; border-collapse:collapse;'>
             <tr style='color:#FF4B4B; text-align:center; font-weight:bold;'><td>D</td><td>L</td><td>M</td><td>M</td><td>J</td><td>V</td><td>S</td></tr>
             {filas_html}
         </table>
     </div>""", height=460)
 
+    # Info Boxes
     st.markdown(f"""
-    <div class="info-box-v9">
+    <div class="info-box-final">
         <p style="color:#FF8C00; font-weight:bold; margin-bottom:12px; font-size:17px;">Simbología:</p>
         <div class="linea-simbolo"><span class="emoji-guia">✅</span> Hoy (Día actual)</div>
         <div class="linea-simbolo"><span class="emoji-guia">🌑</span> Conjunción (Luna Nueva)</div>
         <div class="linea-simbolo"><span class="emoji-guia">🌘</span> Día de Celebración</div>
         <div class="linea-simbolo"><span class="emoji-guia">🌕</span> Luna Llena</div>
     </div>
-    <div class="info-box-v9">
+    <div class="info-box-final">
         <p style="color:#FF8C00; font-weight:bold; margin-bottom:10px; font-size:17px;">Próxima Conjunción:</p>
         <p style="margin:0; font-size:16px;">📍 El Salvador: <b>{info_sv}</b></p>
         <p style="margin:8px 0 0 0; font-size:16px;">🌍 Tiempo Universal: <b>{info_utc}</b></p>
@@ -120,7 +150,13 @@ with tab_mes:
     """, unsafe_allow_html=True)
 
 with tab_anio:
-    anio_f = st.selectbox("Seleccione Año", list(range(2024, 2031)), index=anios_lista.index(hoy_sv.year), key="a_v9")
+    st.write("📅 Seleccione Año")
+    ca1_a, ca2_a, ca3_a = st.columns([1,2,1])
+    if ca1_a.button("➖", key="dec_aa"): st.session_state.anio_val -= 1
+    ca2_a.markdown(f"<div class='stepper-cont'><b>{st.session_state.anio_val}</b></div>", unsafe_allow_html=True)
+    if ca3_a.button("➕", key="inc_aa"): st.session_state.anio_val += 1
+    
+    anio_f = st.session_state.anio_val
     grid_h = "<div style='display:grid; grid-template-columns:1fr 1fr; gap:8px; width:94%; margin:auto;'>"
     for m in range(1, 13):
         t0_a = ts.from_datetime(tz_sv.localize(datetime(anio_f, m, 1)) - timedelta(days=3))
@@ -151,19 +187,10 @@ with tab_anio:
         grid_h += m_h + "</table></div>"
     components.html(grid_h + "</div>", height=1050)
 
-# 4. LEYENDA COMPLETA
 st.markdown("""
     <hr style="border:0.1px solid rgba(128,128,128,0.2); margin-top:20px;">
     <div style="text-align: center; padding: 0 10px 30px 10px;">
-        <p style="color: grey; font-size: 13px; margin-bottom: 5px;">
-            <b>Respaldo Científico:</b> Cálculos astronómicos de alta precisión generados en tiempo real mediante la librería <b>Skyfield</b>.
-        </p>
-        <p style="color: grey; font-size: 12px; margin-bottom: 15px; line-height: 1.4;">
-            Basado en efemérides del <b>Jet Propulsion Laboratory (JPL) de la NASA</b> (DE421).<br>
-            Datos corregidos para transiciones astronómicas exactas en la región de El Salvador.
-        </p>
-        <p style="color: #FF8C00; font-size: 20px; font-weight: bold; font-style: italic; margin-top: 10px;">
-            Voz de la Tórtola, Nejapa.
-        </p>
+        <p style="color: grey; font-size: 13px;"><b>Respaldo Científico:</b> Skyfield & JPL/NASA DE421.</p>
+        <p style="color: #FF8C00; font-size: 20px; font-weight: bold; font-style: italic;">Voz de la Tórtola, Nejapa.</p>
     </div>
     """, unsafe_allow_html=True)
