@@ -15,15 +15,18 @@ hoy_sv = datetime.now(tz_sv)
 dias_esp = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"]
 meses_completos = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"]
 
+# COLOR GRIS ELEGANTE SELECCIONADO
+color_gris_elegante = "#2c303c"
+
 # 2. ESTILOS CSS
-st.markdown("""
+st.markdown(f"""
     <style>
-    h1 { text-align: center; color: #FF8C00; font-size: 26px; }
-    .stTabs [data-baseweb="tab-list"] { justify-content: center; }
-    .info-box {
+    h1 {{ text-align: center; color: #FF8C00; font-size: 28px; }}
+    .stTabs [data-baseweb="tab-list"] {{ justify-content: center; }}
+    .info-box {{
         padding: 15px; border-radius: 12px; border: 1px solid rgba(128,128,128,0.3); 
         margin-top: 15px; background: rgba(128,128,128,0.1);
-    }
+    }}
     </style>
     """, unsafe_allow_html=True)
 
@@ -36,8 +39,8 @@ eph = api.load('de421.bsp')
 
 with tab_mes:
     c1, c2 = st.columns(2)
-    with c1: anio = st.number_input("Año", 2024, 2030, hoy_sv.year, key="y_orig")
-    with c2: mes_id = st.number_input("Mes", 1, 12, hoy_sv.month, key="m_orig")
+    with c1: anio = st.number_input("Año", 2024, 2030, hoy_sv.year, key="y_elegance")
+    with c2: mes_id = st.number_input("Mes", 1, 12, hoy_sv.month, key="m_elegance")
 
     t0 = ts.from_datetime(tz_sv.localize(datetime(anio, mes_id, 1)) - timedelta(days=3))
     t1 = ts.from_datetime(tz_sv.localize(datetime(anio, mes_id, calendar.monthrange(anio, mes_id)[1], 23, 59)))
@@ -67,13 +70,13 @@ with tab_mes:
         for dia in semana:
             if dia == 0: fila += "<td></td>"
             else:
-                ico, b_style = "", "border: 1px solid #444; background: #1a1c23;"
+                ico, b_style = "", f"border: 1px solid #4a4e5a; background: {color_gris_elegante};"
                 if dia in fases_dict:
                     tipo, dibujo = fases_dict[dia]
                     ico = dibujo
-                    if tipo == "CELEB": b_style = "border: 2px solid #FF8C00; background: #2c1a0a;"
+                    if tipo == "CELEB": b_style = f"border: 2px solid #FF8C00; background: #3d2b1f;"
                 if dia == hoy_sv.day and mes_id == hoy_sv.month and anio == hoy_sv.year:
-                    b_style = "border: 2px solid #00FF7F; background: #0a2c1a;"
+                    b_style = f"border: 2px solid #00FF7F; background: #243d30;"
 
                 fila += f"""<td style='padding:4px;'><div style='{b_style} height:70px; border-radius:10px; padding:6px; box-sizing:border-box;'>
                         <div style='color:white; font-weight:bold; font-size:14px;'>{dia}</div>
@@ -102,7 +105,7 @@ with tab_mes:
     """, unsafe_allow_html=True)
 
 with tab_anio:
-    anio_f = st.number_input("Año", 2024, 2030, hoy_sv.year, key="a_orig", label_visibility="collapsed")
+    anio_f = st.number_input("Año", 2024, 2030, hoy_sv.year, key="a_elegance", label_visibility="collapsed")
     grid_h = "<div style='display:grid; grid-template-columns:1fr 1fr; gap:8px; width:94%; margin:auto;'>"
     for m in range(1, 13):
         t0_a = ts.from_datetime(tz_sv.localize(datetime(anio_f, m, 1)) - timedelta(days=3))
@@ -116,7 +119,7 @@ with tab_anio:
                 fc = dt + timedelta(days=ds)
                 if fc.month == m: cs.append(fc.day)
 
-        m_h = f"<div style='background:#1a1c23; padding:8px; border-radius:8px; border:1px solid #333;'>"
+        m_h = f"<div style='background:{color_gris_elegante}; padding:8px; border-radius:8px; border:1px solid #4a4e5a;'>"
         m_h += f"<div style='color:#FF8C00; font-weight:bold; text-align:center; font-size:14px; margin-bottom:3px;'>{meses_completos[m-1]}</div>"
         m_h += "<table style='width:100%; font-size:11px; text-align:center; color:white;'>"
         m_h += "<tr style='color:#FF4B4B;'><td>D</td><td>L</td><td>M</td><td>M</td><td>J</td><td>V</td><td>S</td></tr>"
@@ -126,7 +129,7 @@ with tab_anio:
                 if d == 0: m_h += "<td></td>"
                 else:
                     style = "color:white; font-weight:bold;"
-                    if d in cs: style += "border:1px solid #FF8C00; background:rgba(255,140,0,0.2); border-radius:3px;"
+                    if d in cs: style += "border:1px solid #FF8C00; background:rgba(255,140,0,0.25); border-radius:3px;"
                     if d == hoy_sv.day and m == hoy_sv.month and anio_f == hoy_sv.year: style += "border:1px solid #00FF7F; border-radius:3px;"
                     m_h += f"<td><div style='{style}'>{d}</div></td>"
             m_h += "</tr>"
