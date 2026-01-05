@@ -15,7 +15,7 @@ hoy_sv = datetime.now(tz_sv)
 dias_esp = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"]
 meses_completos = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"]
 
-# ESTILOS CSS
+# ESTILOS CSS ORIGINALES
 st.markdown("""
     <style>
     h1 { text-align: center; color: #FF8C00; margin-bottom: 0px; font-size: 28px; }
@@ -30,7 +30,7 @@ st.markdown("""
     .label-conjunction { color: #aaa; font-size: 14px; margin-bottom: 2px; margin-top: 8px; }
     .data-conjunction { color: white; font-size: 16px; font-weight: bold; margin-bottom: 10px; }
     
-    .nasa-footer { margin-top: 30px; padding: 15px; border-top: 1px solid #333; text-align: center; }
+    .nasa-footer { margin-top: 30px; padding: 15px; border-top: 1px solid #333; text-align: center; color: #888; font-size: 12px; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -65,14 +65,14 @@ def obtener_fechas_nisan(anio_objetivo):
     az_inicio = n13 + timedelta(days=2)
     az_fin = n13 + timedelta(days=8)
     
-    return n13, az_inicio, az_fin
+    return n13, az_inicio, az_fin, f_equinoccio
 
 with tab_mes:
     col_a, col_m = st.columns(2)
     with col_a: anio = st.number_input("Año", 2024, 2030, hoy_sv.year, key="anio_m")
     with col_m: mes_id = st.number_input("Mes", 1, 12, hoy_sv.month, key="mes_m")
 
-    f_n13, f_az_ini, f_az_fin = obtener_fechas_nisan(anio)
+    f_n13, f_az_ini, f_az_fin, equinoccio_real = obtener_fechas_nisan(anio)
 
     fecha_inicio = tz_sv.localize(datetime(anio, mes_id, 1))
     t0_m = ts.from_datetime(fecha_inicio - timedelta(days=3))
@@ -80,12 +80,9 @@ with tab_mes:
     t1_m = ts.from_datetime(fecha_inicio + timedelta(days=ultimo_dia))
     
     t_fases, y_fases = almanac.find_discrete(t0_m, t1_m, almanac.moon_phases(eph))
-    t_seasons, y_seasons = almanac.find_discrete(t0_m, t1_m, almanac.seasons(eph))
     
     fases_dict = {}
-    seasons_dict = {ti.astimezone(tz_sv).day: yi for ti, yi in zip(t_seasons, y_seasons) if ti.astimezone(tz_sv).month == mes_id}
     iconos_fases = {0: "🌑", 1: "🌓", 2: "🌕", 3: "🌗"}
-    
     info_sv, info_utc = "---", "---"
 
     for ti, yi in zip(t_fases, y_fases):
@@ -111,22 +108,26 @@ with tab_mes:
                 icons, b_style = "", "border: 1px solid #333; background: #1a1c23; border-radius: 10px;"
                 f_actual = tz_sv.localize(datetime(anio, mes_id, dia))
                 
-                # REGLAS DE MARCADO
+                # 1. Prioridad: Cena del Señor
                 if dia == f_n13.day and mes_id == f_n13.month:
                     b_style = "border: 2px solid #FF0000; background: #2c0a0a; border-radius: 10px;"
                     icons = "🍷"
+                # 2. Prioridad: Ázimos
                 elif f_az_ini.date() <= f_actual.date() <= f_az_fin.date():
                     b_style = "border: 2px solid #FFC0CB; background: #241a1d; border-radius: 10px;"
                     icons = "🫓"
                 
-                # Agregar Fases Lunares si no hay marcador prioritario
-                if icons == "":
-                    if mes_id == 3 and dia in seasons_dict and seasons_dict[dia] == 0:
-                        icons += "🌸"
-                    if dia in fases_dict:
-                        tipo, dibujo = fases_dict[dia]
+                # 3. Equinoccio (🌸)
+                if dia == equinoccio_real.day and mes_id == equinoccio_real.month:
+                    icons += "🌸"
+                
+                # 4. Fases Lunares
+                if dia in fases_dict:
+                    tipo, dibujo = fases_dict[dia]
+                    if icons == "" or tipo == "CELEB": # Solo agrega si no hay fiesta o si es Día 1
                         icons += dibujo
-                        if tipo == "CELEB": b_style = "border: 2px solid #FF8C00; background: #2c1a0a; border-radius: 10px;"
+                    if tipo == "CELEB" and "🍷" not in icons and "🫓" not in icons:
+                        b_style = "border: 2px solid #FF8C00; background: #2c1a0a; border-radius: 10px;"
 
                 if dia == hoy_sv.day and mes_id == hoy_sv.month and anio == hoy_sv.year:
                     b_style = "border: 2px solid #00FF7F; background: #0a2c1a; border-radius: 10px;"
@@ -139,25 +140,27 @@ with tab_mes:
     st.markdown(f"<h2 style='text-align:center; color:#FF8C00; margin-top:15px; font-size:22px;'>{meses_completos[mes_id-1]} {anio}</h2>", unsafe_allow_html=True)
     components.html(f"<style>table{{width:100%; border-collapse:collapse; font-family:sans-serif; table-layout:fixed;}} th{{color:#FF4B4B; padding-bottom:5px; text-align:center; font-weight:bold; font-size:14px;}}</style><table><tr><th>D</th><th>L</th><th>M</th><th>M</th><th>J</th><th>V</th><th>S</th></tr>{filas_html}</table>", height=440)
 
-    # LEYENDA Y PRÓXIMA CONJUNCIÓN
+    # LEYENDA Y CONJUNCIÓN (Formato original)
     st.markdown(f"""
     <div class="info-box">
         <p style="color:#FF8C00; font-weight:bold; margin-bottom:15px; font-size:17px;">Simbología:</p>
         <div class="info-line"><span class="emoji-size">🍷</span> 13 de Nisán (Cena del Señor)</div>
         <div class="info-line"><span class="emoji-size">🫓</span> 15-21 de Nisán (Ázimos)</div>
-        <div class="info-line"><span class="emoji-size">🌑</span> Conjunción Astronomica</div>
-        <div class="info-line"><span class="emoji-size">🌘</span> Día 1 de Aviv (Luna de Observación)</div>
+        <div class="info-line"><span class="emoji-size">🌸</span> Equinoccio de Primavera</div>
+        <div class="info-line"><span class="emoji-size">🌘</span> Día 1 (Luna de Observación)</div>
     </div>
     <div class="info-box">
         <p style="color:#FF8C00; font-weight:bold; margin-bottom:5px; font-size:17px;">Próxima Conjunción:</p>
-        <p class="data-conjunction">{info_sv} (SV)</p>
-        <p style="color:#aaa; font-size:14px;">{info_utc} (UTC)</p>
+        <div class="label-conjunction">EL SALVADOR (ES)</div>
+        <div class="data-conjunction">{info_sv}</div>
+        <div class="label-conjunction">TIEMPO UNIVERSAL (UTC)</div>
+        <div class="data-conjunction">{info_utc}</div>
     </div>
     """, unsafe_allow_html=True)
 
 with tab_anio:
     anio_full = st.number_input("Año Completo", 2024, 2030, hoy_sv.year, key="anio_f")
-    fn13_a, fazi_a, fazf_a = obtener_fechas_nisan(anio_full)
+    fn13_a, fazi_a, fazf_a, eq_a = obtener_fechas_nisan(anio_full)
     
     grid_html = "<div style='display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; padding-bottom: 20px;'>"
     for m in range(1, 13):
@@ -176,9 +179,18 @@ with tab_anio:
                         est += "border: 1.5px solid #FF0000; background: rgba(255,0,0,0.3); border-radius: 4px;"
                     elif fazi_a.date() <= f_l.date() <= fazf_a.date():
                         est += "border: 1.5px solid #FFC0CB; background: rgba(255,192,203,0.15); border-radius: 4px;"
+                    elif d == eq_a.day and m == eq_a.month:
+                        est += "border: 1px solid #FFD700;"
                     mes_html += f"<td><div style='{est}'>{d}</div></td>"
             mes_html += "</tr>"
         grid_html += mes_html + "</table></div>"
     components.html(grid_html + "</div>", height=1150, scrolling=True)
 
-st.markdown("<div class='nasa-footer'><p style='color: #FF8C00; font-size: 18px; font-weight: bold; font-style: italic;'>Voz de la Tórtola, Nejapa.</p></div>", unsafe_allow_html=True)
+# PIE DE PÁGINA NASA
+st.markdown("""
+    <div class='nasa-footer'>
+        <p style='color: #FF8C00; font-size: 16px; font-weight: bold; font-style: italic; margin-bottom: 8px;'>Voz de la Tórtola, Nejapa.</p>
+        Los datos astronómicos de este calendario, incluyendo fases lunares y equinoccios,<br>
+        están basados en las efemérides DE421 de la NASA y cálculos del Observatorio Naval de EE. UU. (USNO).
+    </div>
+    """, unsafe_allow_html=True)
