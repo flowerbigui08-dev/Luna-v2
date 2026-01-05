@@ -12,45 +12,22 @@ tz_sv = pytz.timezone('America/El_Salvador')
 loc_sv = wgs84.latlon(13.689, -89.187)
 hoy_sv = datetime.now(tz_sv)
 
-# INICIALIZAR ESTADO
-if 'anio_v' not in st.session_state: st.session_state.anio_v = hoy_sv.year
-if 'mes_v' not in st.session_state: st.session_state.mes_v = hoy_sv.month
-
 dias_esp = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"]
 meses_completos = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"]
 
-# 2. ESTILOS CSS (Para que el diseño no se rompa en móvil)
+# 2. ESTILOS CSS (Solo para los cuadros de información)
 st.markdown("""
     <style>
-    h1 { text-align: center; color: #FF8C00; font-size: 26px; }
+    h1 { text-align: center; color: #FF8C00; font-size: 28px; }
     .stTabs [data-baseweb="tab-list"] { justify-content: center; }
     
-    /* El visor central estilo "cuadro" como tu imagen */
-    .visor-estilo-cuadro {
-        background: #1a1c23;
-        color: white;
-        text-align: center;
-        padding: 10px;
-        border-radius: 8px;
-        border: 1px solid #333;
-        font-weight: bold;
-        font-size: 16px;
-        height: 45px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
-
-    /* Forzar que los botones de Streamlit sean compactos */
-    div.stButton > button {
-        height: 45px !important;
-        width: 100%;
-        border-radius: 8px;
-    }
-    
+    /* Cuadros de info que se adaptan al tema */
     .info-box {
-        padding: 15px; border-radius: 12px; border: 1px solid rgba(128,128,128,0.3); 
-        margin-top: 15px; background: rgba(128,128,128,0.1);
+        padding: 15px; 
+        border-radius: 12px; 
+        border: 1px solid rgba(128,128,128,0.3); 
+        margin-top: 15px;
+        background: rgba(128,128,128,0.1);
     }
     </style>
     """, unsafe_allow_html=True)
@@ -63,34 +40,11 @@ ts = api.load.timescale()
 eph = api.load('de421.bsp')
 
 with tab_mes:
-    # FILA DE CONTROLES (Año y Mes)
-    # Usamos columnas muy pequeñas para las flechas y una más grande para el centro
-    
-    # CONTROL DE AÑO
-    st.write("📅 **Año**")
-    ca1, ca2, ca3 = st.columns([1, 2, 1])
-    with ca1:
-        if st.button("➖", key="a_minus"): st.session_state.anio_v -= 1
-    with ca2:
-        st.markdown(f"<div class='visor-estilo-cuadro'>{st.session_state.anio_v}</div>", unsafe_allow_html=True)
-    with ca3:
-        if st.button("➕", key="a_plus"): st.session_state.anio_v += 1
-    
-    # CONTROL DE MES
-    st.write("📆 **Mes**")
-    cm1, cm2, cm3 = st.columns([1, 2, 1])
-    with cm1:
-        if st.button("➖", key="m_minus"):
-            st.session_state.mes_v = 12 if st.session_state.mes_v == 1 else st.session_state.mes_v - 1
-    with cm2:
-        st.markdown(f"<div class='visor-estilo-cuadro'>{meses_completos[st.session_state.mes_v-1]}</div>", unsafe_allow_html=True)
-    with cm3:
-        if st.button("➕", key="m_plus"):
-            st.session_state.mes_v = 1 if st.session_state.mes_v == 12 else st.session_state.mes_v + 1
+    col_a, col_m = st.columns(2)
+    with col_a: anio = st.number_input("Año", 2024, 2030, hoy_sv.year, key="y_m")
+    with col_m: mes_id = st.number_input("Mes", 1, 12, hoy_sv.month, key="m_m")
 
-    anio, mes_id = st.session_state.anio_v, st.session_state.mes_v
-
-    # Cálculos Astronómicos (Igual a tu base)
+    # Cálculos
     t0 = ts.from_datetime(tz_sv.localize(datetime(anio, mes_id, 1)) - timedelta(days=3))
     t1 = ts.from_datetime(tz_sv.localize(datetime(anio, mes_id, calendar.monthrange(anio, mes_id)[1], 23, 59)))
     t_f, y_f = almanac.find_discrete(t0, t1, almanac.moon_phases(eph))
@@ -111,13 +65,13 @@ with tab_mes:
         elif t_c.month == mes_id:
             fases_dict[t_c.day] = [yi, iconos[yi]]
 
-    # Calendario HTML
     filas_html = ""
     for semana in calendar.Calendar(6).monthdayscalendar(anio, mes_id):
         fila = "<tr>"
         for dia in semana:
             if dia == 0: fila += "<td></td>"
             else:
+                # FONDO GRIS OSCURO FIJO SOLO AL CUADRITO DEL DÍA
                 ico, b_style = "", "border: 1px solid #333; background: #1a1c23;"
                 if dia in fases_dict:
                     tipo, dibujo = fases_dict[dia]
@@ -147,16 +101,8 @@ with tab_mes:
     </div>""", unsafe_allow_html=True)
 
 with tab_anio:
-    st.write("📅 **Seleccione Año**")
-    ca_1, ca_2, ca_3 = st.columns([1, 2, 1])
-    with ca_1:
-        if st.button("➖", key="aa_minus"): st.session_state.anio_v -= 1
-    with ca_2:
-        st.markdown(f"<div class='visor-estilo-cuadro'>{st.session_state.anio_v}</div>", unsafe_allow_html=True)
-    with ca_3:
-        if st.button("➕", key="aa_plus"): st.session_state.anio_v += 1
-    
-    anio_f = st.session_state.anio_v
+    anio_f = st.number_input("Año", 2024, 2030, hoy_sv.year, key="a_f", label_visibility="collapsed")
+    # ANCHO AL 92% PARA ELIMINAR EL MORDISCO
     grid_h = "<div style='display:grid; grid-template-columns:1fr 1fr; gap:8px; width:92%; margin:auto;'>"
     for m in range(1, 13):
         t0_a = ts.from_datetime(tz_sv.localize(datetime(anio_f, m, 1)) - timedelta(days=3))
@@ -173,6 +119,7 @@ with tab_anio:
         m_h = f"<div style='background:#1a1c23; padding:8px; border-radius:8px; border:1px solid #333;'>"
         m_h += f"<div style='color:#FF8C00; font-weight:bold; text-align:center; font-size:14px; margin-bottom:3px;'>{meses_completos[m-1]}</div>"
         m_h += "<table style='width:100%; font-size:11px; text-align:center; color:white;'>"
+        m_h += "<tr style='color:#FF4B4B;'><td>D</td><td>L</td><td>M</td><td>M</td><td>J</td><td>V</td><td>S</td></tr>"
         for sem in calendar.Calendar(6).monthdayscalendar(anio_f, m):
             m_h += "<tr>"
             for d in sem:
@@ -186,8 +133,12 @@ with tab_anio:
         grid_h += m_h + "</table></div>"
     components.html(grid_h + "</div>", height=1050)
 
+# 4. PIE DE PÁGINA (Respaldo NASA)
 st.markdown("""
-    <div style="text-align: center; margin-top:20px;">
+    <hr style="border:0.1px solid rgba(128,128,128,0.3); margin-top:20px;">
+    <div style="text-align: center;">
+        <p style="color: grey; font-size: 13px; margin: 0;"><b>Respaldo Científico:</b> Cálculos en tiempo real con Skyfield y efemérides de la NASA.</p>
+        <p style="color: grey; font-size: 12px; margin: 5px 0;">Efemérides NASA | Corregido para transiciones astronómicas.</p>
         <p style="color: #FF8C00; font-size: 18px; font-weight: bold; font-style: italic;">Voz de la Tórtola, Nejapa.</p>
     </div>
     """, unsafe_allow_html=True)
