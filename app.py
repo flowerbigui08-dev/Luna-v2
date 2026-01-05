@@ -17,42 +17,14 @@ meses_completos = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio
 
 color_gris = "#2c303c"
 
-# ESTADO PARA NAVEGACIÓN
-if 'anio_val' not in st.session_state:
-    st.session_state.anio_val = hoy_sv.year
-if 'mes_val' not in st.session_state:
-    st.session_state.mes_val = hoy_sv.month
-
-# 2. ESTILOS CSS REFORZADOS
+# 2. ESTILOS CSS PARA BLOQUEAR TECLADO Y MEJORAR VISTA
 st.markdown(f"""
     <style>
-    h1 {{ text-align: center; color: #FF8C00; font-size: 26px; margin-bottom: 10px; }}
+    h1 {{ text-align: center; color: #FF8C00; font-size: 28px; }}
     .stTabs [data-baseweb="tab-list"] {{ justify-content: center; }}
     
-    /* Caja del visor central */
-    .visor-central {{
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        background: {color_gris};
-        color: white;
-        font-weight: bold;
-        font-size: 18px;
-        height: 45px;
-        border-radius: 8px;
-        border: 1px solid rgba(255,255,255,0.2);
-        margin-bottom: 10px;
-    }}
-    
-    .label-guia {{
-        text-align: center;
-        color: #FF8C00;
-        font-size: 14px;
-        font-weight: bold;
-        margin-bottom: 5px;
-    }}
-
-    .info-box-v10 {{
+    /* Estilo para las cajas de información */
+    .info-box-v11 {{
         padding: 15px; border-radius: 12px; 
         border: 1px solid rgba(128, 128, 128, 0.3); 
         margin-top: 15px; 
@@ -62,11 +34,10 @@ st.markdown(f"""
     .linea-simbolo {{ display: flex; align-items: center; margin-bottom: 10px; font-size: 16px; }}
     .emoji-guia {{ width: 35px; font-size: 26px; margin-right: 12px; text-align: center; }}
     
-    /* Ajuste de botones Streamlit para que no tengan margen extra */
-    div.stButton > button {{
-        width: 100%;
-        height: 45px;
-        font-size: 20px;
+    /* TRUCO: Evitar que el selectbox se vea gigante y que no pida foco de teclado */
+    div[data-testid="stSelectbox"] > div {{
+        background-color: {color_gris};
+        border-radius: 10px;
     }}
     </style>
     """, unsafe_allow_html=True)
@@ -79,35 +50,17 @@ ts = api.load.timescale()
 eph = api.load('de421.bsp')
 
 with tab_mes:
-    # FILA DE CONTROLADORES
-    c_izq, c_der = st.columns(2)
+    c1, c2 = st.columns(2)
     
-    with c_izq:
-        st.markdown("<div class='label-guia'>Año</div>", unsafe_allow_html=True)
-        ba1, ba2, ba3 = st.columns([1,2,1])
-        with ba1: 
-            if st.button("➖", key="a_menos"): st.session_state.anio_val -= 1
-        with ba2:
-            st.markdown(f"<div class='visor-central'>{st.session_state.anio_val}</div>", unsafe_allow_html=True)
-        with ba3:
-            if st.button("➕", key="a_mas"): st.session_state.anio_val += 1
-            
-    with c_der:
-        st.markdown("<div class='label-guia'>Mes</div>", unsafe_allow_html=True)
-        bm1, bm2, bm3 = st.columns([1,2,1])
-        with bm1:
-            if st.button("➖", key="m_menos"):
-                if st.session_state.mes_val > 1: st.session_state.mes_val -= 1
-        with bm2:
-            st.markdown(f"<div class='visor-central'>{meses_completos[st.session_state.mes_val-1]}</div>", unsafe_allow_html=True)
-        with bm3:
-            if st.button("➕", key="m_mas"):
-                if st.session_state.mes_val < 12: st.session_state.mes_val += 1
+    # REGRESAMOS A LA SELECCIÓN DE LISTA (Selectbox no activa el teclado)
+    with c1:
+        lista_anios = list(range(2024, 2031))
+        anio = st.selectbox("Seleccione Año", lista_anios, index=lista_anios.index(hoy_sv.year), key="sel_anio")
+    
+    with c2:
+        mes_id = st.selectbox("Seleccione Mes", list(range(1, 13)), index=hoy_sv.month-1, format_func=lambda x: meses_completos[x-1], key="sel_mes")
 
-    anio = st.session_state.anio_val
-    mes_id = st.session_state.mes_val
-
-    # Cálculos
+    # Cálculos astronómicos
     t0 = ts.from_datetime(tz_sv.localize(datetime(anio, mes_id, 1)) - timedelta(days=3))
     t1 = ts.from_datetime(tz_sv.localize(datetime(anio, mes_id, calendar.monthrange(anio, mes_id)[1], 23, 59)))
     t_f, y_f = almanac.find_discrete(t0, t1, almanac.moon_phases(eph))
@@ -130,7 +83,7 @@ with tab_mes:
         elif t_c.month == mes_id:
             fases_dict[t_c.day] = [yi, iconos[yi]]
 
-    # Tabla
+    # Calendario visual
     filas_html = ""
     for semana in calendar.Calendar(6).monthdayscalendar(anio, mes_id):
         fila = "<tr>"
@@ -152,22 +105,23 @@ with tab_mes:
 
     components.html(f"""
     <div style='font-family:sans-serif;'>
+        <h3 style='text-align:center; color:#FF8C00;'>{meses_completos[mes_id-1]} {anio}</h3>
         <table style='width:100%; table-layout:fixed; border-collapse:collapse;'>
             <tr style='color:#FF4B4B; text-align:center; font-weight:bold;'><td>D</td><td>L</td><td>M</td><td>M</td><td>J</td><td>V</td><td>S</td></tr>
             {filas_html}
         </table>
     </div>""", height=460)
 
-    # Info
+    # Simbología corregida
     st.markdown(f"""
-    <div class="info-box-v10">
+    <div class="info-box-v11">
         <p style="color:#FF8C00; font-weight:bold; margin-bottom:12px; font-size:17px;">Simbología:</p>
         <div class="linea-simbolo"><span class="emoji-guia">✅</span> Hoy (Día actual)</div>
         <div class="linea-simbolo"><span class="emoji-guia">🌑</span> Conjunción (Luna Nueva)</div>
         <div class="linea-simbolo"><span class="emoji-guia">🌘</span> Día de Celebración</div>
         <div class="linea-simbolo"><span class="emoji-guia">🌕</span> Luna Llena</div>
     </div>
-    <div class="info-box-v10">
+    <div class="info-box-v11">
         <p style="color:#FF8C00; font-weight:bold; margin-bottom:10px; font-size:17px;">Próxima Conjunción:</p>
         <p style="margin:0; font-size:16px;">📍 El Salvador: <b>{info_sv}</b></p>
         <p style="margin:8px 0 0 0; font-size:16px;">🌍 Tiempo Universal: <b>{info_utc}</b></p>
@@ -175,16 +129,7 @@ with tab_mes:
     """, unsafe_allow_html=True)
 
 with tab_anio:
-    st.markdown("<div class='label-guia'>Navegar Año</div>", unsafe_allow_html=True)
-    ba1_a, ba2_a, ba3_a = st.columns([1,2,1])
-    with ba1_a: 
-        if st.button("➖", key="aa_menos"): st.session_state.anio_val -= 1
-    with ba2_a:
-        st.markdown(f"<div class='visor-central'>{st.session_state.anio_val}</div>", unsafe_allow_html=True)
-    with ba3_a:
-        if st.button("➕", key="aa_mas"): st.session_state.anio_val += 1
-    
-    anio_f = st.session_state.anio_val
+    anio_f = st.selectbox("Año a visualizar", lista_anios, index=lista_anios.index(hoy_sv.year), key="sel_anio_tab")
     grid_h = "<div style='display:grid; grid-template-columns:1fr 1fr; gap:8px; width:94%; margin:auto;'>"
     for m in range(1, 13):
         t0_a = ts.from_datetime(tz_sv.localize(datetime(anio_f, m, 1)) - timedelta(days=3))
@@ -215,6 +160,7 @@ with tab_anio:
         grid_h += m_h + "</table></div>"
     components.html(grid_h + "</div>", height=1050)
 
+# Leyenda final
 st.markdown("""
     <hr style="border:0.1px solid rgba(128,128,128,0.2); margin-top:20px;">
     <div style="text-align: center; padding: 0 10px 30px 10px;">
