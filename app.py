@@ -9,7 +9,6 @@ import calendar
 # 1. CONFIGURACIÓN
 st.set_page_config(page_title="Luna SV", layout="wide")
 tz_sv = pytz.timezone('America/El_Salvador')
-loc_sv = wgs84.latlon(13.689, -89.187)
 hoy_sv = datetime.now(tz_sv)
 
 dias_esp = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"]
@@ -17,13 +16,40 @@ meses_completos = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio
 
 color_gris = "#2c303c"
 
+# MANEJO DE ESTADO (Para que las flechas funcionen)
+if 'anio_v' not in st.session_state:
+    st.session_state.anio_v = hoy_sv.year
+if 'mes_v' not in st.session_state:
+    st.session_state.mes_v = hoy_sv.month
+
 # 2. ESTILOS CSS
 st.markdown(f"""
     <style>
-    h1 {{ text-align: center; color: #FF8C00; font-size: 28px; }}
+    h1 {{ text-align: center; color: #FF8C00; font-size: 26px; }}
     .stTabs [data-baseweb="tab-list"] {{ justify-content: center; }}
     
-    .info-box-v12 {{
+    /* Contenedor del Visor */
+    .visor-flechas {{
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: {color_gris};
+        color: white;
+        font-weight: bold;
+        font-size: 18px;
+        height: 45px;
+        border-radius: 8px;
+        border: 1px solid rgba(255,255,255,0.2);
+    }}
+    
+    .label-mini {{
+        text-align: center;
+        color: #FF8C00;
+        font-size: 12px;
+        margin-bottom: 2px;
+    }}
+
+    .info-box-v13 {{
         padding: 15px; border-radius: 12px; 
         border: 1px solid rgba(128, 128, 128, 0.3); 
         margin-top: 15px; 
@@ -33,9 +59,12 @@ st.markdown(f"""
     .linea-simbolo {{ display: flex; align-items: center; margin-bottom: 10px; font-size: 16px; }}
     .emoji-guia {{ width: 35px; font-size: 26px; margin-right: 12px; text-align: center; }}
     
-    /* Forzamos que los selectores no tengan foco de edición */
-    div[data-testid="stSelectbox"] input {{
-        caret-color: transparent !important;
+    /* Estilo de los botones de flecha */
+    div.stButton > button {{
+        width: 100%;
+        border-radius: 8px;
+        border: 1px solid rgba(255,255,255,0.1);
+        height: 45px;
     }}
     </style>
     """, unsafe_allow_html=True)
@@ -48,18 +77,29 @@ ts = api.load.timescale()
 eph = api.load('de421.bsp')
 
 with tab_mes:
-    c1, c2 = st.columns(2)
+    # FILA DE NAVEGACIÓN
+    col_a, col_m = st.columns(2)
     
-    with c1:
-        lista_anios = list(range(2024, 2031))
-        anio = st.selectbox("Seleccione Año", lista_anios, index=lista_anios.index(hoy_sv.year), key="sel_anio_v12")
-    
-    with c2:
-        # CAMBIO CLAVE: Usamos los nombres directamente para que el móvil no crea que es un número
-        mes_nombre = st.selectbox("Seleccione Mes", meses_completos, index=hoy_sv.month-1, key="sel_mes_v12")
-        mes_id = meses_completos.index(mes_nombre) + 1
+    with col_a:
+        st.markdown("<p class='label-mini'>AÑO</p>", unsafe_allow_html=True)
+        ba1, ba2, ba3 = st.columns([1,2,1])
+        if ba1.button("◀️", key="btn_a1"): st.session_state.anio_v -= 1
+        ba2.markdown(f"<div class='visor-flechas'>{st.session_state.anio_v}</div>", unsafe_allow_html=True)
+        if ba3.button("▶️", key="btn_a2"): st.session_state.anio_v += 1
+            
+    with col_m:
+        st.markdown("<p class='label-mini'>MES</p>", unsafe_allow_html=True)
+        bm1, bm2, bm3 = st.columns([1,2,1])
+        if bm1.button("◀️", key="btn_m1"):
+            st.session_state.mes_v = 12 if st.session_state.mes_v == 1 else st.session_state.mes_v - 1
+        bm2.markdown(f"<div class='visor-flechas'>{meses_completos[st.session_state.mes_v-1]}</div>", unsafe_allow_html=True)
+        if bm3.button("▶️", key="btn_m2"):
+            st.session_state.mes_v = 1 if st.session_state.mes_v == 12 else st.session_state.mes_v + 1
 
-    # Cálculos astronómicos
+    anio = st.session_state.anio_v
+    mes_id = st.session_state.mes_v
+
+    # Cálculos Astronómicos
     t0 = ts.from_datetime(tz_sv.localize(datetime(anio, mes_id, 1)) - timedelta(days=3))
     t1 = ts.from_datetime(tz_sv.localize(datetime(anio, mes_id, calendar.monthrange(anio, mes_id)[1], 23, 59)))
     t_f, y_f = almanac.find_discrete(t0, t1, almanac.moon_phases(eph))
@@ -82,7 +122,7 @@ with tab_mes:
         elif t_c.month == mes_id:
             fases_dict[t_c.day] = [yi, iconos[yi]]
 
-    # Tabla
+    # Render de la Tabla
     filas_html = ""
     for semana in calendar.Calendar(6).monthdayscalendar(anio, mes_id):
         fila = "<tr>"
@@ -104,23 +144,22 @@ with tab_mes:
 
     components.html(f"""
     <div style='font-family:sans-serif;'>
-        <h3 style='text-align:center; color:#FF8C00;'>{meses_completos[mes_id-1]} {anio}</h3>
         <table style='width:100%; table-layout:fixed; border-collapse:collapse;'>
             <tr style='color:#FF4B4B; text-align:center; font-weight:bold;'><td>D</td><td>L</td><td>M</td><td>M</td><td>J</td><td>V</td><td>S</td></tr>
             {filas_html}
         </table>
     </div>""", height=460)
 
-    # Simbología
+    # Cajas de Información
     st.markdown(f"""
-    <div class="info-box-v12">
+    <div class="info-box-v13">
         <p style="color:#FF8C00; font-weight:bold; margin-bottom:12px; font-size:17px;">Simbología:</p>
         <div class="linea-simbolo"><span class="emoji-guia">✅</span> Hoy (Día actual)</div>
         <div class="linea-simbolo"><span class="emoji-guia">🌑</span> Conjunción (Luna Nueva)</div>
         <div class="linea-simbolo"><span class="emoji-guia">🌘</span> Día de Celebración</div>
         <div class="linea-simbolo"><span class="emoji-guia">🌕</span> Luna Llena</div>
     </div>
-    <div class="info-box-v12">
+    <div class="info-box-v13">
         <p style="color:#FF8C00; font-weight:bold; margin-bottom:10px; font-size:17px;">Próxima Conjunción:</p>
         <p style="margin:0; font-size:16px;">📍 El Salvador: <b>{info_sv}</b></p>
         <p style="margin:8px 0 0 0; font-size:16px;">🌍 Tiempo Universal: <b>{info_utc}</b></p>
@@ -128,7 +167,13 @@ with tab_mes:
     """, unsafe_allow_html=True)
 
 with tab_anio:
-    anio_f = st.selectbox("Año a visualizar", lista_anios, index=lista_anios.index(hoy_sv.year), key="sel_anio_tab_v12")
+    st.markdown("<p class='label-mini'>NAVEGAR AÑO</p>", unsafe_allow_html=True)
+    ba1_a, ba2_a, ba3_a = st.columns([1,2,1])
+    if ba1_a.button("◀️", key="btn_aa1"): st.session_state.anio_v -= 1
+    ba2_a.markdown(f"<div class='visor-flechas'>{st.session_state.anio_v}</div>", unsafe_allow_html=True)
+    if ba3_a.button("▶️", key="btn_aa2"): st.session_state.anio_v += 1
+    
+    anio_f = st.session_state.anio_v
     grid_h = "<div style='display:grid; grid-template-columns:1fr 1fr; gap:8px; width:94%; margin:auto;'>"
     for m in range(1, 13):
         t0_a = ts.from_datetime(tz_sv.localize(datetime(anio_f, m, 1)) - timedelta(days=3))
