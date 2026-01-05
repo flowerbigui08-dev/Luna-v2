@@ -38,15 +38,13 @@ tab_mes, tab_anio = st.tabs(["📅 Vista Mensual", "🗓️ Año Completo"])
 ts = api.load.timescale()
 eph = api.load('de421.bsp')
 
-# --- LÓGICA TÉCNICA DE NISÁN CORREGIDA ---
+# --- LÓGICA DE NISÁN ---
 def obtener_fechas_nisan(anio_objetivo):
-    # 1. Buscar Equinoccio
     t0 = ts.from_datetime(tz_sv.localize(datetime(anio_objetivo, 3, 1)))
     t1 = ts.from_datetime(tz_sv.localize(datetime(anio_objetivo, 3, 31)))
     t_eq, y_eq = almanac.find_discrete(t0, t1, almanac.seasons(eph))
     f_equinoccio = t_eq[0].astimezone(tz_sv) if len(t_eq) > 0 else tz_sv.localize(datetime(anio_objetivo, 3, 20))
 
-    # 2. Buscar Conjunciones
     tl0 = ts.from_datetime(tz_sv.localize(datetime(anio_objetivo, 3, 1)))
     tl1 = ts.from_datetime(tz_sv.localize(datetime(anio_objetivo, 5, 1)))
     t_f, y_f = almanac.find_discrete(tl0, tl1, almanac.moon_phases(eph))
@@ -56,16 +54,14 @@ def obtener_fechas_nisan(anio_objetivo):
     dia_1 = c_luna + timedelta(days=(1 if c_luna.hour < 18 else 2))
     n13 = dia_1 + timedelta(days=12) 
     
-    # Regla del embolismo
     if n13.date() < f_equinoccio.date():
         c_luna = lunas_nuevas[1]
         dia_1 = c_luna + timedelta(days=(1 if c_luna.hour < 18 else 2))
         n13 = dia_1 + timedelta(days=12)
     
-    # AJUSTE DE RANGOS:
-    # Si Nisán 13 es n13, Nisán 15 es n13 + 2 días.
+    # Marcador de Ázimos: Inicio Nisán 15, Fin Nisán 21
     az_inicio = n13 + timedelta(days=2)
-    az_fin = n13 + timedelta(days=8) # Hasta Nisán 21
+    az_fin = n13 + timedelta(days=8)
     
     return n13, az_inicio, az_fin
 
@@ -76,7 +72,6 @@ with tab_mes:
 
     f_n13, f_az_ini, f_az_fin = obtener_fechas_nisan(anio)
 
-    # CÁLCULOS FASES
     fecha_inicio = tz_sv.localize(datetime(anio, mes_id, 1))
     t0_m = ts.from_datetime(fecha_inicio - timedelta(days=3))
     ultimo_dia = calendar.monthrange(anio, mes_id)[1]
@@ -105,10 +100,10 @@ with tab_mes:
         for dia in semana:
             if dia == 0: fila += "<td></td>"
             else:
-                icons, b_style = "", "border: 1px solid #333; background: #1a1c23; border-radius: 10px; color: white;"
+                icons, b_style = "", "border: 1px solid #333; background: #1a1c23; border-radius: 10px;"
                 f_actual = tz_sv.localize(datetime(anio, mes_id, dia))
                 
-                # REGLAS DE PRIORIDAD CORREGIDAS
+                # REGLAS DE PRIORIDAD (Corrección de visibilidad de número)
                 if dia == f_n13.day and mes_id == f_n13.month:
                     b_style = "border: 2px solid #FF0000; background: #2c0a0a; border-radius: 10px;"
                     icons = "🍷"
@@ -126,7 +121,7 @@ with tab_mes:
                 if dia == hoy_sv.day and mes_id == hoy_sv.month and anio == hoy_sv.year:
                     b_style = "border: 2px solid #00FF7F; background: #0a2c1a; border-radius: 10px;"
                 
-                fila += f"""<td style='padding:4px;'><div style='{b_style} height: 75px; padding: 6px; box-sizing: border-box;'>
+                fila += f"""<td style='padding:4px;'><div style='{b_style} height: 75px; padding: 6px; box-sizing: border-box; color: white;'>
                         <div style='font-weight:bold; font-size:13px;'>{dia}</div>
                         <div style='text-align:center; font-size:24px; margin-top:2px;'>{icons}</div></div></td>"""
         filas_html += fila + "</tr>"
@@ -140,6 +135,7 @@ with tab_mes:
         <p style="color:#FF8C00; font-weight:bold; margin-bottom:15px; font-size:17px;">Simbología:</p>
         <div class="info-line"><span class="emoji-size">🍷</span> 13 de Nisán (Cena del Señor)</div>
         <div class="info-line"><span class="emoji-size">🫓</span> 15-21 de Nisán (Ázimos)</div>
+        <div class="info-line"><span class="emoji-size">🌘</span> Día 1 de Aviv (Celebración)</div>
     </div>
     """, unsafe_allow_html=True)
 
@@ -158,7 +154,7 @@ with tab_anio:
             for d in sem:
                 if d == 0: mes_html += "<td></td>"
                 else:
-                    est = "padding: 2px;"
+                    est = "padding: 2px; color: white;" # Forzar color blanco
                     f_l = tz_sv.localize(datetime(anio_full, m, d))
                     if d == fn13_a.day and m == fn13_a.month:
                         est += "border: 1.5px solid #FF0000; background: rgba(255,0,0,0.3); border-radius: 4px;"
