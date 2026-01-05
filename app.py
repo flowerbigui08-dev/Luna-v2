@@ -15,21 +15,21 @@ hoy_sv = datetime.now(tz_sv)
 dias_esp = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"]
 meses_completos = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"]
 
-# 2. ESTILOS CSS REFORZADOS
+# 2. ESTILOS CSS
 st.markdown("""
     <style>
-    h1 { text-align: center; color: #FF8C00; font-size: 30px; margin-bottom: 5px; }
+    h1 { text-align: center; color: #FF8C00; font-size: 32px; margin-bottom: 5px; }
     .stTabs [data-baseweb="tab-list"] { justify-content: center; }
     
-    .info-box-v4 {
+    .info-box-v5 {
         padding: 18px; 
         border-radius: 12px; 
         border: 1px solid rgba(128,128,128,0.3); 
         margin-top: 15px;
         background: rgba(128,128,128,0.1);
     }
-    .linea-info { font-size: 16px; margin-bottom: 8px; display: flex; align-items: center; }
-    .emoji-guia { font-size: 22px; margin-right: 12px; width: 30px; text-align: center; }
+    .linea-info { font-size: 17px; margin-bottom: 8px; display: flex; align-items: center; }
+    .emoji-guia { font-size: 24px; margin-right: 12px; width: 35px; text-align: center; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -42,8 +42,8 @@ eph = api.load('de421.bsp')
 
 with tab_mes:
     c1, c2 = st.columns(2)
-    with c1: anio = st.number_input("Año", 2024, 2030, hoy_sv.year, key="y_v4")
-    with c2: mes_id = st.number_input("Mes", 1, 12, hoy_sv.month, key="m_v4")
+    with c1: anio = st.number_input("Año", 2024, 2030, hoy_sv.year, key="y_v5")
+    with c2: mes_id = st.number_input("Mes", 1, 12, hoy_sv.month, key="m_v5")
 
     t0 = ts.from_datetime(tz_sv.localize(datetime(anio, mes_id, 1)) - timedelta(days=3))
     t1 = ts.from_datetime(tz_sv.localize(datetime(anio, mes_id, calendar.monthrange(anio, mes_id)[1], 23, 59)))
@@ -55,10 +55,11 @@ with tab_mes:
 
     for ti, yi in zip(t_f, y_f):
         t_c = ti.astimezone(tz_sv)
+        t_u = ti.astimezone(pytz.utc)
         if yi == 0: 
             if t_c.month == mes_id:
                 info_sv = f"{dias_esp[t_c.weekday()]} {t_c.strftime('%d/%m/%y %I:%M %p')}"
-                info_utc = f"{ti.astimezone(pytz.utc).strftime('%H:%M')} (UTC)"
+                info_utc = f"{dias_esp[t_u.weekday()]} {t_u.strftime('%d/%m/%y %H:%M')}"
                 fases_dict[t_c.day] = [0, "🌑"]
             ds = 1 if t_c.hour < 18 else 2
             fc = t_c + timedelta(days=ds)
@@ -78,42 +79,40 @@ with tab_mes:
                     ico = dibujo
                     if tipo == "CELEB": b_style = "border: 2px solid #FF8C00; background: #2c1a0a;"
                 if dia == hoy_sv.day and mes_id == hoy_sv.month and anio == hoy_sv.year:
-                    b_style = "border: 2px solid #00FF7F; background: #0a2c1a;"
+                    b_style = "border: 2.5px solid #00FF7F; background: #0a2c1a;"
 
-                # FUENTE DE DÍA AGRANDADA A 16px
-                fila += f"""<td style='padding:4px;'><div style='{b_style} height:75px; border-radius:12px; padding:6px; box-sizing:border-box;'>
-                        <div style='color:white; font-weight:bold; font-size:16px;'>{dia}</div>
-                        <div style='text-align:center; font-size:26px;'>{ico}</div></div></td>"""
+                fila += f"""<td style='padding:4px;'><div style='{b_style} height:85px; border-radius:12px; padding:8px; box-sizing:border-box;'>
+                        <div style='color:white; font-weight:bold; font-size:18px;'>{dia}</div>
+                        <div style='text-align:center; font-size:30px; margin-top:2px;'>{ico}</div></div></td>"""
         filas_html += fila + "</tr>"
 
     components.html(f"""
     <div style='font-family:sans-serif;'>
-        <h3 style='text-align:center; color:#FF8C00; font-size:24px;'>{meses_completos[mes_id-1]} {anio}</h3>
+        <h3 style='text-align:center; color:#FF8C00; font-size:26px;'>{meses_completos[mes_id-1]} {anio}</h3>
         <table style='width:100%; table-layout:fixed; border-collapse:collapse;'>
-            <tr style='color:#FF4B4B; text-align:center; font-weight:bold; font-size:16px;'><td>D</td><td>L</td><td>M</td><td>M</td><td>J</td><td>V</td><td>S</td></tr>
+            <tr style='color:#FF4B4B; text-align:center; font-weight:bold; font-size:18px;'><td>D</td><td>L</td><td>M</td><td>M</td><td>J</td><td>V</td><td>S</td></tr>
             {filas_html}
         </table>
-    </div>""", height=480)
+    </div>""", height=560)
 
-    # 3. CUADROS DE INFORMACIÓN (Fuentes agrandadas)
     st.markdown(f"""
-    <div class="info-box-v4">
-        <p style="color:#FF8C00; font-weight:bold; margin-bottom:12px; font-size:18px;">Simbología:</p>
+    <div class="info-box-v5">
+        <p style="color:#FF8C00; font-weight:bold; margin-bottom:12px; font-size:19px;">Simbología:</p>
         <div class="linea-info"><span class="emoji-guia">✅</span> Hoy (Día actual)</div>
         <div class="linea-info"><span class="emoji-guia">🌑</span> Conjunción (Luna Nueva)</div>
         <div class="linea-info"><span class="emoji-guia">🌘</span> Día de Celebración</div>
         <div class="linea-info"><span class="emoji-guia">🌕</span> Luna Llena</div>
     </div>
-    <div class="info-box-v4">
-        <p style="color:#FF8C00; font-weight:bold; margin-bottom:10px; font-size:18px;">Próxima Conjunción:</p>
-        <p style="margin:0; font-size:17px;">📍 El Salvador: <b>{info_sv}</b></p>
-        <p style="margin:5px 0 0 0; font-size:15px; opacity:0.8;">🌍 Tiempo Universal: <b>{info_utc}</b></p>
+    <div class="info-box-v5">
+        <p style="color:#FF8C00; font-weight:bold; margin-bottom:10px; font-size:19px;">Próxima Conjunción:</p>
+        <p style="margin:0; font-size:18px;">📍 El Salvador: <b>{info_sv}</b></p>
+        <p style="margin:8px 0 0 0; font-size:17px; opacity:0.9;">🌍 Tiempo Universal: <b>{info_utc}</b></p>
     </div>
     """, unsafe_allow_html=True)
 
 with tab_anio:
-    anio_f = st.number_input("Año", 2024, 2030, hoy_sv.year, key="a_v4", label_visibility="collapsed")
-    grid_h = "<div style='display:grid; grid-template-columns:1fr 1fr; gap:10px; width:92%; margin:auto;'>"
+    anio_f = st.number_input("Año", 2024, 2030, hoy_sv.year, key="a_v5", label_visibility="collapsed")
+    grid_h = "<div style='display:grid; grid-template-columns:1fr 1fr; gap:12px; width:94%; margin:auto;'>"
     for m in range(1, 13):
         t0_a = ts.from_datetime(tz_sv.localize(datetime(anio_f, m, 1)) - timedelta(days=3))
         t1_a = ts.from_datetime(tz_sv.localize(datetime(anio_f, m, calendar.monthrange(anio_f, m)[1], 23, 59)))
@@ -126,9 +125,9 @@ with tab_anio:
                 fc = dt + timedelta(days=ds)
                 if fc.month == m: cs.append(fc.day)
 
-        m_h = f"<div style='background:#1a1c23; padding:10px; border-radius:10px; border:1px solid #444;'>"
-        m_h += f"<div style='color:#FF8C00; font-weight:bold; text-align:center; font-size:15px; margin-bottom:5px;'>{meses_completos[m-1]}</div>"
-        m_h += "<table style='width:100%; font-size:13px; text-align:center; color:white;'>"
+        m_h = f"<div style='background:#1a1c23; padding:12px; border-radius:12px; border:1px solid #444;'>"
+        m_h += f"<div style='color:#FF8C00; font-weight:bold; text-align:center; font-size:18px; margin-bottom:8px;'>{meses_completos[m-1]}</div>"
+        m_h += "<table style='width:100%; font-size:16px; text-align:center; color:white;'>"
         m_h += "<tr style='color:#FF4B4B; font-weight:bold;'><td>D</td><td>L</td><td>M</td><td>M</td><td>J</td><td>V</td><td>S</td></tr>"
         for sem in calendar.Calendar(6).monthdayscalendar(anio_f, m):
             m_h += "<tr>"
@@ -136,19 +135,19 @@ with tab_anio:
                 if d == 0: m_h += "<td></td>"
                 else:
                     style = "color:white; font-weight:bold;"
-                    if d in cs: style += "border:1px solid #FF8C00; background:rgba(255,140,0,0.25); border-radius:4px;"
-                    if d == hoy_sv.day and m == hoy_sv.month and anio_f == hoy_sv.year: style += "border:1.5px solid #00FF7F; border-radius:4px;"
-                    m_h += f"<td><div style='padding:2px; {style}'>{d}</div></td>"
+                    if d in cs: style += "border:1.5px solid #FF8C00; background:rgba(255,140,0,0.3); border-radius:6px;"
+                    if d == hoy_sv.day and m == hoy_sv.month and anio_f == hoy_sv.year: style += "border:2px solid #00FF7F; border-radius:6px;"
+                    m_h += f"<td><div style='padding:4px; {style}'>{d}</div></td>"
             m_h += "</tr>"
         grid_h += m_h + "</table></div>"
-    components.html(grid_h + "</div>", height=1150)
+    components.html(grid_h + "</div>", height=1500)
 
 # 4. PIE DE PÁGINA
 st.markdown("""
     <hr style="border:0.1px solid rgba(128,128,128,0.3); margin-top:30px;">
-    <div style="text-align: center; padding-bottom: 20px;">
-        <p style="color: grey; font-size: 13px; margin: 0;"><b>Respaldo Científico:</b> Cálculos en tiempo real con Skyfield y efemérides de la NASA.</p>
-        <p style="color: grey; font-size: 12px; margin: 5px 0;">Efemérides NASA | Corregido para transiciones astronómicas.</p>
-        <p style="color: #FF8C00; font-size: 20px; font-weight: bold; font-style: italic;">Voz de la Tórtola, Nejapa.</p>
+    <div style="text-align: center; padding-bottom: 30px;">
+        <p style="color: grey; font-size: 14px; margin: 0;"><b>Respaldo Científico:</b> Cálculos en tiempo real con Skyfield y efemérides de la NASA.</p>
+        <p style="color: grey; font-size: 13px; margin: 5px 0;">Efemérides NASA | Corregido para transiciones astronómicas.</p>
+        <p style="color: #FF8C00; font-size: 22px; font-weight: bold; font-style: italic;">Voz de la Tórtola, Nejapa.</p>
     </div>
     """, unsafe_allow_html=True)
