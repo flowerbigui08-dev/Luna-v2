@@ -15,13 +15,21 @@ hoy_sv = datetime.now(tz_sv)
 dias_esp = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"]
 meses_completos = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"]
 
+# ESTILOS CSS
 st.markdown("""
     <style>
     h1 { text-align: center; color: #FF8C00; margin-bottom: 0px; font-size: 28px; }
     div[data-testid="stNumberInput"] { width: 150px !important; margin: 0 auto !important; }
     input { pointer-events: none !important; caret-color: transparent !important; text-align: center !important; font-weight: bold !important; }
     .stTabs [data-baseweb="tab-list"] { gap: 10px; justify-content: center; }
+    
     .info-box { background: #1a1c23; padding: 15px; border-radius: 12px; border: 1px solid #333; margin-top: 15px; color: white; }
+    .info-line { color: white; font-size: 15px; margin-bottom: 10px; display: flex; align-items: center; }
+    .emoji-size { font-size: 22px; margin-right: 15px; width: 30px; text-align: center; }
+    
+    .nasa-footer {
+        margin-top: 30px; padding: 15px; border-top: 1px solid #333; text-align: center;
+    }
     </style>
     """, unsafe_allow_html=True)
 
@@ -37,7 +45,7 @@ with tab_mes:
     with col_a: anio = st.number_input("Año", 2024, 2030, hoy_sv.year, key="anio_m")
     with col_m: mes_id = st.number_input("Mes", 1, 12, hoy_sv.month, key="mes_m")
 
-    # LÓGICA DE CÁLCULO (Con memoria de mes anterior)
+    # CÁLCULOS CON MEMORIA DE MES ANTERIOR
     fecha_inicio = tz_sv.localize(datetime(anio, mes_id, 1))
     t0 = ts.from_datetime(fecha_inicio - timedelta(days=3))
     ultimo_dia = calendar.monthrange(anio, mes_id)[1]
@@ -86,7 +94,15 @@ with tab_mes:
     st.markdown(f"<h2 style='text-align:center; color:#FF8C00; margin-top:15px; font-size:22px;'>{meses_completos[mes_id-1]} {anio}</h2>", unsafe_allow_html=True)
     components.html(f"<style>table{{width:100%; border-collapse:collapse; font-family:sans-serif; table-layout:fixed;}} th{{color:#FF4B4B; padding-bottom:5px; text-align:center; font-weight:bold; font-size:14px;}}</style><table><tr><th>D</th><th>L</th><th>M</th><th>M</th><th>J</th><th>V</th><th>S</th></tr>{filas_html}</table>", height=440)
 
+    # REAPARECEN LAS CAJAS DE INFO Y EMOJIS
     st.markdown(f"""
+    <div class="info-box">
+        <p style="color:#FF8C00; font-weight:bold; margin-bottom:15px; font-size:17px;">Simbología:</p>
+        <div class="info-line"><span class="emoji-size">✅</span> Hoy (Día actual)</div>
+        <div class="info-line"><span class="emoji-size">🌑</span> Conjunción</div>
+        <div class="info-line"><span class="emoji-size">🌘</span> Día de Celebración</div>
+        <div class="info-line"><span class="emoji-size">🌕</span> Luna Llena</div>
+    </div>
     <div class="info-box">
         <p style="color:#FF8C00; font-weight:bold; margin-bottom:10px; font-size:17px;">Próxima Conjunción:</p>
         <p style="color:white; font-size:16px; font-weight:bold; margin-bottom:10px;">{info_sv}</p>
@@ -96,7 +112,6 @@ with tab_mes:
 
 with tab_anio:
     anio_full = st.number_input("Año Completo", 2024, 2030, hoy_sv.year, key="anio_f")
-    # SUBIMOS LA ALTURA A 1200 PARA EVITAR EL CORTE EN DICIEMBRE
     grid_html = "<div style='display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; padding-bottom: 20px;'>"
     for m in range(1, 13):
         f_ini = tz_sv.localize(datetime(anio_full, m, 1))
@@ -104,7 +119,6 @@ with tab_anio:
         ultimo_a = calendar.monthrange(anio_full, m)[1]
         t1_a = ts.from_datetime(f_ini + timedelta(days=ultimo_a))
         t_f, y_f = almanac.find_discrete(t0_a, t1_a, almanac.moon_phases(eph))
-        
         celebs = []
         for ti, yi in zip(t_f, y_f):
             if yi == 0: 
@@ -128,8 +142,16 @@ with tab_anio:
                     mes_html += f"<td><div style='{estilo}'>{d}</div></td>"
             mes_html += "</tr>"
         grid_html += mes_html + "</table></div>"
-    
-    # SE AGREGA UN CONTENEDOR FINAL PARA ASEGURAR ESPACIO
     components.html(grid_html + "</div>", height=1150, scrolling=True)
 
-st.markdown("<div style='text-align: center; margin-top: 20px;'><p style='color: #888; font-size: 16px; font-weight: bold; font-style: italic;'>Voz de la Tórtola, Nejapa.</p></div>", unsafe_allow_html=True)
+# REAPARECE EL PIE DE PÁGINA NASA
+st.markdown("""
+    <div class="nasa-footer">
+        <p style="color: #666; font-size: 12px; line-height: 1.5;">
+            <b>Respaldo Científico:</b> Cálculos generados en tiempo real utilizando Skyfield y efemérides de la NASA.
+        </p>
+        <p style="color: #FF8C00; font-size: 18px; font-weight: bold; font-style: italic; margin-top: 15px;">
+            Voz de la Tórtola, Nejapa.
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
