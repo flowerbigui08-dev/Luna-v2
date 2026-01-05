@@ -24,7 +24,7 @@ st.markdown(f"""
     h1 {{ text-align: center; color: #FF8C00; font-size: 28px; }}
     .stTabs [data-baseweb="tab-list"] {{ justify-content: center; }}
     
-    .info-box-v7 {{
+    .info-box-v8 {{
         padding: 15px; border-radius: 12px; 
         border: 1px solid rgba(128, 128, 128, 0.3); 
         margin-top: 15px; 
@@ -34,13 +34,13 @@ st.markdown(f"""
     .linea-simbolo {{
         display: flex;
         align-items: center;
-        margin-bottom: 8px;
-        font-size: 15px;
+        margin-bottom: 10px;
+        font-size: 16px;
     }}
     .emoji-guia {{
-        width: 30px;
-        font-size: 20px;
-        margin-right: 10px;
+        width: 35px;
+        font-size: 26px; /* FUENTE DE EMOJIS MÁS GRANDE */
+        margin-right: 12px;
         text-align: center;
     }}
     </style>
@@ -55,8 +55,8 @@ eph = api.load('de421.bsp')
 
 with tab_mes:
     c1, c2 = st.columns(2)
-    with c1: anio = st.number_input("Año", 2024, 2030, hoy_sv.year, key="y_v7")
-    with c2: mes_id = st.number_input("Mes", 1, 12, hoy_sv.month, key="m_v7")
+    with c1: anio = st.number_input("Año", 2024, 2030, hoy_sv.year, key="y_v8")
+    with c2: mes_id = st.number_input("Mes", 1, 12, hoy_sv.month, key="m_v8")
 
     t0 = ts.from_datetime(tz_sv.localize(datetime(anio, mes_id, 1)) - timedelta(days=3))
     t1 = ts.from_datetime(tz_sv.localize(datetime(anio, mes_id, calendar.monthrange(anio, mes_id)[1], 23, 59)))
@@ -72,7 +72,7 @@ with tab_mes:
         if yi == 0: 
             if t_c.month == mes_id:
                 info_sv = f"{dias_esp[t_c.weekday()]} {t_c.strftime('%d/%m/%y %I:%M %p')}"
-                info_utc = f"{dias_esp[t_u.weekday()]} {t_u.strftime('%d/%m/%y %H:%M')}"
+                info_utc = f"{dias_esp[t_u.weekday()]} {t_u.strftime('%H:%M')} (UTC)"
                 fases_dict[t_c.day] = [0, "🌑"]
             ds = 1 if t_c.hour < 18 else 2
             fc = t_c + timedelta(days=ds)
@@ -108,24 +108,24 @@ with tab_mes:
         </table>
     </div>""", height=460)
 
-    # 3. CAJAS DE INFORMACIÓN (TAMAÑOS IGUALADOS)
+    # 3. INFORMACIÓN CON EMOJIS MÁS GRANDES
     st.markdown(f"""
-    <div class="info-box-v7">
+    <div class="info-box-v8">
         <p style="color:#FF8C00; font-weight:bold; margin-bottom:12px; font-size:17px;">Simbología:</p>
         <div class="linea-simbolo"><span class="emoji-guia">✅</span> Hoy (Día actual)</div>
         <div class="linea-simbolo"><span class="emoji-guia">🌑</span> Conjunción (Luna Nueva)</div>
         <div class="linea-simbolo"><span class="emoji-guia">🌘</span> Día de Celebración</div>
         <div class="linea-simbolo"><span class="emoji-guia">🌕</span> Luna Llena</div>
     </div>
-    <div class="info-box-v7">
+    <div class="info-box-v8">
         <p style="color:#FF8C00; font-weight:bold; margin-bottom:10px; font-size:17px;">Próxima Conjunción:</p>
         <p style="margin:0; font-size:16px;">📍 El Salvador: <b>{info_sv}</b></p>
-        <p style="margin:8px 0 0 0; font-size:16px;">🌍 Tiempo UTC: <b>{info_utc}</b></p>
+        <p style="margin:8px 0 0 0; font-size:16px;">🌍 Tiempo Universal: <b>{info_utc}</b></p>
     </div>
     """, unsafe_allow_html=True)
 
 with tab_anio:
-    anio_f = st.number_input("Año", 2024, 2030, hoy_sv.year, key="a_v7", label_visibility="collapsed")
+    anio_f = st.number_input("Año", 2024, 2030, hoy_sv.year, key="a_v8", label_visibility="collapsed")
     grid_h = "<div style='display:grid; grid-template-columns:1fr 1fr; gap:8px; width:94%; margin:auto;'>"
     for m in range(1, 13):
         t0_a = ts.from_datetime(tz_sv.localize(datetime(anio_f, m, 1)) - timedelta(days=3))
@@ -156,10 +156,19 @@ with tab_anio:
         grid_h += m_h + "</table></div>"
     components.html(grid_h + "</div>", height=1050)
 
+# 4. LEYENDA COMPLETA NASA Y NEJAPA
 st.markdown("""
     <hr style="border:0.1px solid rgba(128,128,128,0.2); margin-top:20px;">
-    <div style="text-align: center; padding-bottom: 20px;">
-        <p style="color: grey; font-size: 13px;">Respaldo Científico: Skyfield & NASA Ephemeris.</p>
-        <p style="color: #FF8C00; font-size: 20px; font-weight: bold; font-style: italic;">Voz de la Tórtola, Nejapa.</p>
+    <div style="text-align: center; padding: 0 10px 30px 10px;">
+        <p style="color: grey; font-size: 13px; margin-bottom: 5px;">
+            <b>Respaldo Científico:</b> Cálculos astronómicos de alta precisión generados en tiempo real mediante la librería <b>Skyfield</b>.
+        </p>
+        <p style="color: grey; font-size: 12px; margin-bottom: 15px; line-height: 1.4;">
+            Basado en efemérides del <b>Jet Propulsion Laboratory (JPL) de la NASA</b> (DE421).<br>
+            Datos corregidos para transiciones astronómicas exactas en la región de El Salvador.
+        </p>
+        <p style="color: #FF8C00; font-size: 20px; font-weight: bold; font-style: italic; margin-top: 10px;">
+            Voz de la Tórtola, Nejapa.
+        </p>
     </div>
     """, unsafe_allow_html=True)
