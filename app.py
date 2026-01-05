@@ -27,9 +27,10 @@ st.markdown("""
     .info-line { color: white; font-size: 15px; margin-bottom: 10px; display: flex; align-items: center; }
     .emoji-size { font-size: 22px; margin-right: 15px; width: 30px; text-align: center; }
     
-    .nasa-footer {
-        margin-top: 30px; padding: 15px; border-top: 1px solid #333; text-align: center;
-    }
+    .label-conjunction { color: #aaa; font-size: 14px; margin-bottom: 2px; margin-top: 8px; }
+    .data-conjunction { color: white; font-size: 16px; font-weight: bold; margin-bottom: 10px; }
+    
+    .nasa-footer { margin-top: 30px; padding: 15px; border-top: 1px solid #333; text-align: center; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -45,14 +46,18 @@ with tab_mes:
     with col_a: anio = st.number_input("Año", 2024, 2030, hoy_sv.year, key="anio_m")
     with col_m: mes_id = st.number_input("Mes", 1, 12, hoy_sv.month, key="mes_m")
 
-    # CÁLCULOS CON MEMORIA DE MES ANTERIOR
+    # CÁLCULOS
     fecha_inicio = tz_sv.localize(datetime(anio, mes_id, 1))
     t0 = ts.from_datetime(fecha_inicio - timedelta(days=3))
     ultimo_dia = calendar.monthrange(anio, mes_id)[1]
     t1 = ts.from_datetime(fecha_inicio + timedelta(days=ultimo_dia))
 
+    # Fases y Primavera
     t_fases, y_fases = almanac.find_discrete(t0, t1, almanac.moon_phases(eph))
+    t_seasons, y_seasons = almanac.find_discrete(t0, t1, almanac.seasons(eph))
+    
     fases_dict = {}
+    seasons_dict = {ti.astimezone(tz_sv).day: yi for ti, yi in zip(t_seasons, y_seasons) if ti.astimezone(tz_sv).month == mes_id}
     info_sv, info_utc = "---", "---"
     iconos_fases = {0: "🌑", 1: "🌓", 2: "🌕", 3: "🌗"}
 
@@ -79,14 +84,20 @@ with tab_mes:
             if dia == 0: fila += "<td></td>"
             else:
                 icons, b_style = "", "border: 1px solid #333; background: #1a1c23; border-radius: 10px; color: white;"
+                
+                # Agregar Primavera
+                if mes_id == 3 and dia in seasons_dict and seasons_dict[dia] == 0:
+                    icons += "🌸"
+                
                 if dia in fases_dict:
                     tipo, dibujo = fases_dict[dia]
-                    icons = dibujo
+                    icons += dibujo
                     if tipo == "CELEB": b_style = "border: 2px solid #FF8C00; background: #2c1a0a; border-radius: 10px; color: white;"
+                
                 if dia == hoy_sv.day and mes_id == hoy_sv.month and anio == hoy_sv.year:
                     b_style = "border: 2px solid #00FF7F; background: #0a2c1a; border-radius: 10px; color: white;"
                 
-                fila += f"""<td style='padding:4px;'><div style='{b_style} height: 70px; padding: 6px; box-sizing: border-box;'>
+                fila += f"""<td style='padding:4px;'><div style='{b_style} height: 75px; padding: 6px; box-sizing: border-box;'>
                         <div style='font-weight:bold; font-size:13px;'>{dia}</div>
                         <div style='text-align:center; font-size:24px; margin-top:2px;'>{icons}</div></div></td>"""
         filas_html += fila + "</tr>"
@@ -94,19 +105,22 @@ with tab_mes:
     st.markdown(f"<h2 style='text-align:center; color:#FF8C00; margin-top:15px; font-size:22px;'>{meses_completos[mes_id-1]} {anio}</h2>", unsafe_allow_html=True)
     components.html(f"<style>table{{width:100%; border-collapse:collapse; font-family:sans-serif; table-layout:fixed;}} th{{color:#FF4B4B; padding-bottom:5px; text-align:center; font-weight:bold; font-size:14px;}}</style><table><tr><th>D</th><th>L</th><th>M</th><th>M</th><th>J</th><th>V</th><th>S</th></tr>{filas_html}</table>", height=440)
 
-    # REAPARECEN LAS CAJAS DE INFO Y EMOJIS
+    # Cajas de Simbología y Conjunción Unificadas
     st.markdown(f"""
     <div class="info-box">
         <p style="color:#FF8C00; font-weight:bold; margin-bottom:15px; font-size:17px;">Simbología:</p>
         <div class="info-line"><span class="emoji-size">✅</span> Hoy (Día actual)</div>
         <div class="info-line"><span class="emoji-size">🌑</span> Conjunción</div>
         <div class="info-line"><span class="emoji-size">🌘</span> Día de Celebración</div>
+        <div class="info-line"><span class="emoji-size">🌸</span> Primavera (Marzo)</div>
         <div class="info-line"><span class="emoji-size">🌕</span> Luna Llena</div>
     </div>
     <div class="info-box">
-        <p style="color:#FF8C00; font-weight:bold; margin-bottom:10px; font-size:17px;">Próxima Conjunción:</p>
-        <p style="color:white; font-size:16px; font-weight:bold; margin-bottom:10px;">{info_sv}</p>
-        <p style="color:#aaa; font-size:14px; margin:0;">UTC: {info_utc}</p>
+        <p style="color:#FF8C00; font-weight:bold; margin-bottom:5px; font-size:17px;">Próxima Conjunción:</p>
+        <p class="label-conjunction">📍 El Salvador (SV):</p>
+        <p class="data-conjunction">{info_sv}</p>
+        <p class="label-conjunction">🌍 Tiempo Universal (UTC):</p>
+        <p class="data-conjunction">{info_utc}</p>
     </div>
     """, unsafe_allow_html=True)
 
@@ -144,7 +158,6 @@ with tab_anio:
         grid_html += mes_html + "</table></div>"
     components.html(grid_html + "</div>", height=1150, scrolling=True)
 
-# REAPARECE EL PIE DE PÁGINA NASA
 st.markdown("""
     <div class="nasa-footer">
         <p style="color: #666; font-size: 12px; line-height: 1.5;">
