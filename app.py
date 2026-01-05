@@ -41,28 +41,33 @@ tab_mes, tab_anio = st.tabs(["📅 Vista Mensual", "🗓️ Año Completo"])
 ts = api.load.timescale()
 eph = api.load('de421.bsp')
 
-# --- FUNCIÓN TÉCNICA PARA 13 DE NISÁN ---
+# --- FUNCIÓN TÉCNICA CORREGIDA PARA 13 DE NISÁN ---
 def calcular_nisan_13(anio_objetivo):
-    # 1. Buscar Equinoccio de Primavera
+    # 1. Buscar Equinoccio
     t_equi_0 = ts.from_datetime(tz_sv.localize(datetime(anio_objetivo, 3, 1)))
     t_equi_1 = ts.from_datetime(tz_sv.localize(datetime(anio_objetivo, 3, 31)))
     t_eq, y_eq = almanac.find_discrete(t_equi_0, t_equi_1, almanac.seasons(eph))
     f_equinoccio = t_eq[0].astimezone(tz_sv) if len(t_eq) > 0 else tz_sv.localize(datetime(anio_objetivo, 3, 20))
 
-    # 2. Buscar Conjunciones (Lunas Nuevas) desde marzo
+    # 2. Buscar Conjunciones
     t_luna_0 = ts.from_datetime(tz_sv.localize(datetime(anio_objetivo, 3, 1)))
     t_luna_1 = ts.from_datetime(tz_sv.localize(datetime(anio_objetivo, 5, 1)))
     t_f, y_f = almanac.find_discrete(t_luna_0, t_luna_1, almanac.moon_phases(eph))
     
     lunas_nuevas = [ti.astimezone(tz_sv) for ti, yi in zip(t_f, y_f) if yi == 0]
     
-    # 3. Aplicar regla: 13 de Nisán debe ser >= Equinoccio
-    candidata = lunas_nuevas[0]
-    n13 = candidata + timedelta(days=13)
+    # Determinamos el "Día 1" de Nisán (Celebración)
+    c_luna = lunas_nuevas[0]
+    dia_1 = c_luna + timedelta(days=(1 if c_luna.hour < 18 else 2))
     
+    # Cálculo del Día 13 (Día 1 + 12 días)
+    n13 = dia_1 + timedelta(days=12)
+    
+    # Regla del embolismo: Si el día 13 cae antes del equinoccio, saltar al siguiente mes
     if n13.date() < f_equinoccio.date():
-        candidata = lunas_nuevas[1]
-        n13 = candidata + timedelta(days=13)
+        c_luna = lunas_nuevas[1]
+        dia_1 = c_luna + timedelta(days=(1 if c_luna.hour < 18 else 2))
+        n13 = dia_1 + timedelta(days=12)
     
     return n13
 
@@ -71,7 +76,6 @@ with tab_mes:
     with col_a: anio = st.number_input("Año", 2024, 2030, hoy_sv.year, key="anio_m")
     with col_m: mes_id = st.number_input("Mes", 1, 12, hoy_sv.month, key="mes_m")
 
-    # Obtener fecha de Nisán 13 para este año
     fecha_nisan_13 = calcular_nisan_13(anio)
 
     # CÁLCULOS
@@ -112,21 +116,18 @@ with tab_mes:
             else:
                 icons, b_style = "", "border: 1px solid #333; background: #1a1c23; border-radius: 10px; color: white;"
                 
-                # Prioridad 1: 13 de Nisán (Rojo + Copa)
+                # Prioridad 1: 13 de Nisán (Corregido a conteo inclusivo)
                 if dia == fecha_nisan_13.day and mes_id == fecha_nisan_13.month:
                     b_style = "border: 2px solid #FF0000; background: #2c0a0a; border-radius: 10px; color: white;"
                     icons = "🍷"
                 else:
-                    # Agregar Primavera
                     if mes_id == 3 and dia in seasons_dict and seasons_dict[dia] == 0:
                         icons += "🌸"
-                    
                     if dia in fases_dict:
                         tipo, dibujo = fases_dict[dia]
                         icons += dibujo
                         if tipo == "CELEB": b_style = "border: 2px solid #FF8C00; background: #2c1a0a; border-radius: 10px; color: white;"
                 
-                # Hoy
                 if dia == hoy_sv.day and mes_id == hoy_sv.month and anio == hoy_sv.year:
                     b_style = "border: 2px solid #00FF7F; background: #0a2c1a; border-radius: 10px; color: white;"
                 
@@ -145,8 +146,8 @@ with tab_mes:
         <div class="info-line"><span class="emoji-size">✅</span> Hoy (Día actual)</div>
         <div class="info-line"><span class="emoji-size">🍷</span> Cena del Señor (13 de Nisán)</div>
         <div class="info-line"><span class="emoji-size">🌑</span> Conjunción</div>
-        <div class="info-line"><span class="emoji-size">🌘</span> Día de Celebración</div>
-        <div class="info-line"><span class="emoji-size">🌸</span> Primavera (Marzo)</div>
+        <div class="info-line"><span class="emoji-size">🌘</span> Día de Celebración (Día 1)</div>
+        <div class="info-line"><span class="emoji-size">🌸</span> Primavera (Equinoccio)</div>
     </div>
     <div class="info-box">
         <p style="color:#FF8C00; font-weight:bold; margin-bottom:5px; font-size:17px;">Próxima Conjunción:</p>
@@ -185,7 +186,6 @@ with tab_anio:
                 if d == 0: mes_html += "<td></td>"
                 else:
                     estilo = "padding: 2px;"
-                    # Marcar 13 de Nisán en el año completo también
                     if d == fecha_n13_anio.day and m == fecha_n13_anio.month:
                         estilo += "border: 1.5px solid #FF0000; background: rgba(255,0,0,0.3); border-radius: 4px;"
                     elif d in celebs: 
