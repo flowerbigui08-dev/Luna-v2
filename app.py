@@ -12,22 +12,47 @@ tz_sv = pytz.timezone('America/El_Salvador')
 loc_sv = wgs84.latlon(13.689, -89.187)
 hoy_sv = datetime.now(tz_sv)
 
+# INICIALIZAR ESTADO (Para que los botones funcionen al primer toque)
+if 'anio_v' not in st.session_state:
+    st.session_state.anio_v = hoy_sv.year
+if 'mes_v' not in st.session_state:
+    st.session_state.mes_v = hoy_sv.month
+
 dias_esp = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"]
 meses_completos = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"]
 
-# 2. ESTILOS CSS (Solo para los cuadros de información)
+# 2. ESTILOS CSS
 st.markdown("""
     <style>
     h1 { text-align: center; color: #FF8C00; font-size: 28px; }
     .stTabs [data-baseweb="tab-list"] { justify-content: center; }
     
-    /* Cuadros de info que se adaptan al tema */
+    /* Cuadros de info */
     .info-box {
         padding: 15px; 
         border-radius: 12px; 
         border: 1px solid rgba(128,128,128,0.3); 
         margin-top: 15px;
         background: rgba(128,128,128,0.1);
+    }
+
+    /* Estilo para el número mostrado entre botones */
+    .visor-numero {
+        text-align: center;
+        background: #1a1c23;
+        color: #FF8C00;
+        font-weight: bold;
+        font-size: 18px;
+        padding: 8px;
+        border-radius: 8px;
+        border: 1px solid #333;
+        margin-bottom: 10px;
+    }
+    
+    /* Ajuste de botones para móvil */
+    div.stButton > button {
+        width: 100%;
+        font-weight: bold;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -41,10 +66,26 @@ eph = api.load('de421.bsp')
 
 with tab_mes:
     col_a, col_m = st.columns(2)
-    with col_a: anio = st.number_input("Año", 2024, 2030, hoy_sv.year, key="y_m")
-    with col_m: mes_id = st.number_input("Mes", 1, 12, hoy_sv.month, key="m_m")
+    
+    with col_a:
+        st.write("📅 Año")
+        ca1, ca2, ca3 = st.columns([1,2,1])
+        if ca1.button("➖", key="a_menos"): st.session_state.anio_v -= 1
+        ca2.markdown(f"<div class='visor-numero'>{st.session_state.anio_v}</div>", unsafe_allow_html=True)
+        if ca3.button("➕", key="a_mas"): st.session_state.anio_v += 1
+        anio = st.session_state.anio_v
 
-    # Cálculos
+    with col_m:
+        st.write("📆 Mes")
+        cm1, cm2, cm3 = st.columns([1,2,1])
+        if cm1.button("➖", key="m_menos"):
+            st.session_state.mes_v = 12 if st.session_state.mes_v == 1 else st.session_state.mes_v - 1
+        cm2.markdown(f"<div class='visor-numero'>{meses_completos[st.session_state.mes_v-1]}</div>", unsafe_allow_html=True)
+        if cm3.button("➕", key="m_mas"):
+            st.session_state.mes_v = 1 if st.session_state.mes_v == 12 else st.session_state.mes_v + 1
+        mes_id = st.session_state.mes_v
+
+    # Cálculos (Iguales a tu código base)
     t0 = ts.from_datetime(tz_sv.localize(datetime(anio, mes_id, 1)) - timedelta(days=3))
     t1 = ts.from_datetime(tz_sv.localize(datetime(anio, mes_id, calendar.monthrange(anio, mes_id)[1], 23, 59)))
     t_f, y_f = almanac.find_discrete(t0, t1, almanac.moon_phases(eph))
@@ -71,7 +112,6 @@ with tab_mes:
         for dia in semana:
             if dia == 0: fila += "<td></td>"
             else:
-                # FONDO GRIS OSCURO FIJO SOLO AL CUADRITO DEL DÍA
                 ico, b_style = "", "border: 1px solid #333; background: #1a1c23;"
                 if dia in fases_dict:
                     tipo, dibujo = fases_dict[dia]
@@ -101,8 +141,14 @@ with tab_mes:
     </div>""", unsafe_allow_html=True)
 
 with tab_anio:
-    anio_f = st.number_input("Año", 2024, 2030, hoy_sv.year, key="a_f", label_visibility="collapsed")
-    # ANCHO AL 92% PARA ELIMINAR EL MORDISCO
+    # Selector de año para vista anual con botones también para evitar teclado
+    st.write("📅 Seleccione Año")
+    ca1a, ca2a, ca3a = st.columns([1,2,1])
+    if ca1a.button("➖", key="aa_menos"): st.session_state.anio_v -= 1
+    ca2a.markdown(f"<div class='visor-numero'>{st.session_state.anio_v}</div>", unsafe_allow_html=True)
+    if ca3a.button("➕", key="aa_mas"): st.session_state.anio_v += 1
+    anio_f = st.session_state.anio_v
+
     grid_h = "<div style='display:grid; grid-template-columns:1fr 1fr; gap:8px; width:92%; margin:auto;'>"
     for m in range(1, 13):
         t0_a = ts.from_datetime(tz_sv.localize(datetime(anio_f, m, 1)) - timedelta(days=3))
@@ -133,12 +179,10 @@ with tab_anio:
         grid_h += m_h + "</table></div>"
     components.html(grid_h + "</div>", height=1050)
 
-# 4. PIE DE PÁGINA (Respaldo NASA)
 st.markdown("""
     <hr style="border:0.1px solid rgba(128,128,128,0.3); margin-top:20px;">
     <div style="text-align: center;">
-        <p style="color: grey; font-size: 13px; margin: 0;"><b>Respaldo Científico:</b> Cálculos en tiempo real con Skyfield y efemérides de la NASA.</p>
-        <p style="color: grey; font-size: 12px; margin: 5px 0;">Efemérides NASA | Corregido para transiciones astronómicas.</p>
+        <p style="color: grey; font-size: 13px; margin: 0;"><b>Respaldo Científico:</b> Cálculos con Skyfield y NASA.</p>
         <p style="color: #FF8C00; font-size: 18px; font-weight: bold; font-style: italic;">Voz de la Tórtola, Nejapa.</p>
     </div>
     """, unsafe_allow_html=True)
