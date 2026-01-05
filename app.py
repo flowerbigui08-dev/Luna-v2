@@ -5,11 +5,12 @@ from skyfield.api import wgs84
 from datetime import datetime, timedelta
 import pytz
 import calendar
+import plotly.graph_objects as go # Nueva para el gráfico
 
 # 1. CONFIGURACIÓN
 st.set_page_config(page_title="Luna SV", layout="wide")
 tz_sv = pytz.timezone('America/El_Salvador')
-loc_sv = wgs84.latlon(13.689, -89.187)
+loc_sv = wgs84.latlon(13.689, -89.187) # Coordenadas de El Salvador
 hoy_sv = datetime.now(tz_sv)
 
 dias_esp = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"]
@@ -22,14 +23,11 @@ st.markdown("""
     div[data-testid="stNumberInput"] { width: 150px !important; margin: 0 auto !important; }
     input { pointer-events: none !important; caret-color: transparent !important; text-align: center !important; font-weight: bold !important; }
     .stTabs [data-baseweb="tab-list"] { gap: 10px; justify-content: center; }
-    
     .info-box { background: #1a1c23; padding: 15px; border-radius: 12px; border: 1px solid #333; margin-top: 15px; color: white; }
     .info-line { color: white; font-size: 15px; margin-bottom: 10px; display: flex; align-items: center; }
     .emoji-size { font-size: 22px; margin-right: 15px; width: 30px; text-align: center; }
-    
     .label-conjunction { color: #aaa; font-size: 14px; margin-bottom: 2px; margin-top: 8px; }
     .data-conjunction { color: white; font-size: 16px; font-weight: bold; margin-bottom: 10px; }
-    
     .nasa-footer { margin-top: 30px; padding: 15px; border-top: 1px solid #333; text-align: center; }
     </style>
     """, unsafe_allow_html=True)
@@ -46,13 +44,12 @@ with tab_mes:
     with col_a: anio = st.number_input("Año", 2024, 2030, hoy_sv.year, key="anio_m")
     with col_m: mes_id = st.number_input("Mes", 1, 12, hoy_sv.month, key="mes_m")
 
-    # CÁLCULOS
+    # CÁLCULOS LUNARES
     fecha_inicio = tz_sv.localize(datetime(anio, mes_id, 1))
-    t0 = ts.from_datetime(fecha_inicio - timedelta(days=3))
     ultimo_dia = calendar.monthrange(anio, mes_id)[1]
+    t0 = ts.from_datetime(fecha_inicio - timedelta(days=3))
     t1 = ts.from_datetime(fecha_inicio + timedelta(days=ultimo_dia))
 
-    # Fases y Primavera
     t_fases, y_fases = almanac.find_discrete(t0, t1, almanac.moon_phases(eph))
     t_seasons, y_seasons = almanac.find_discrete(t0, t1, almanac.seasons(eph))
     
@@ -68,7 +65,6 @@ with tab_mes:
                 info_sv = f"{dias_esp[t_c.weekday()]} {t_c.strftime('%d/%m/%y %I:%M %p')}"
                 t_u = t_c.astimezone(pytz.utc)
                 info_utc = f"{dias_esp[t_u.weekday()]} {t_u.strftime('%d/%m/%y %H:%M')}"
-            
             desplazamiento = 1 if t_c.hour < 18 else 2
             t_celeb = t_c + timedelta(days=desplazamiento)
             if t_c.month == mes_id: fases_dict[t_c.day] = [0, "🌑"]
@@ -76,7 +72,7 @@ with tab_mes:
         elif t_c.month == mes_id:
             fases_dict[t_c.day] = [yi, iconos_fases[yi]]
 
-    # Render Mensual
+    # Render Calendario
     filas_html = ""
     for semana in calendar.Calendar(6).monthdayscalendar(anio, mes_id):
         fila = "<tr>"
@@ -84,19 +80,13 @@ with tab_mes:
             if dia == 0: fila += "<td></td>"
             else:
                 icons, b_style = "", "border: 1px solid #333; background: #1a1c23; border-radius: 10px; color: white;"
-                
-                # Agregar Primavera
-                if mes_id == 3 and dia in seasons_dict and seasons_dict[dia] == 0:
-                    icons += "🌸"
-                
+                if mes_id == 3 and dia in seasons_dict and seasons_dict[dia] == 0: icons += "🌸"
                 if dia in fases_dict:
                     tipo, dibujo = fases_dict[dia]
                     icons += dibujo
                     if tipo == "CELEB": b_style = "border: 2px solid #FF8C00; background: #2c1a0a; border-radius: 10px; color: white;"
-                
                 if dia == hoy_sv.day and mes_id == hoy_sv.month and anio == hoy_sv.year:
                     b_style = "border: 2px solid #00FF7F; background: #0a2c1a; border-radius: 10px; color: white;"
-                
                 fila += f"""<td style='padding:4px;'><div style='{b_style} height: 75px; padding: 6px; box-sizing: border-box;'>
                         <div style='font-weight:bold; font-size:13px;'>{dia}</div>
                         <div style='text-align:center; font-size:24px; margin-top:2px;'>{icons}</div></div></td>"""
@@ -105,7 +95,53 @@ with tab_mes:
     st.markdown(f"<h2 style='text-align:center; color:#FF8C00; margin-top:15px; font-size:22px;'>{meses_completos[mes_id-1]} {anio}</h2>", unsafe_allow_html=True)
     components.html(f"<style>table{{width:100%; border-collapse:collapse; font-family:sans-serif; table-layout:fixed;}} th{{color:#FF4B4B; padding-bottom:5px; text-align:center; font-weight:bold; font-size:14px;}}</style><table><tr><th>D</th><th>L</th><th>M</th><th>M</th><th>J</th><th>V</th><th>S</th></tr>{filas_html}</table>", height=440)
 
-    # Cajas de Simbología y Conjunción Unificadas
+    # --- NUEVA SECCIÓN: GRÁFICO DE PUESTA DE SOL ---
+    st.markdown("<div class='info-box'><p style='color:#FF8C00; font-weight:bold; margin-bottom:10px; font-size:17px;'>🌅 Puestas de Sol (Ocaso)</p>", unsafe_allow_html=True)
+    
+    dias_grafico = []
+    horas_grafico = []
+    
+    # Calcular puestas de sol para los días 1, 5, 10, 15, 20, 25 y último del mes
+    puntos_dia = [1, 5, 10, 15, 20, 25, ultimo_dia]
+    for d in puntos_dia:
+        t_ocaso_inicio = ts.from_datetime(tz_sv.localize(datetime(anio, mes_id, d, 12, 0)))
+        t_ocaso_fin = ts.from_datetime(tz_sv.localize(datetime(anio, mes_id, d, 23, 59)))
+        t_ocaso, y_ocaso = almanac.find_discrete(t_ocaso_inicio, t_ocaso_fin, almanac.sunrise_sunset(eph, loc_sv))
+        
+        for ti, yi in zip(t_ocaso, y_ocaso):
+            if yi == 0: # 0 es el ocaso (sunset)
+                dt_ocaso = ti.astimezone(tz_sv)
+                dias_grafico.append(f"Día {d}")
+                # Convertimos la hora a valor decimal para el gráfico (ej: 18:30 -> 18.5)
+                horas_grafico.append(dt_ocaso.hour + dt_ocaso.minute/60.0)
+
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(
+        x=dias_grafico, 
+        y=horas_grafico,
+        mode='lines+markers',
+        line=dict(color='#FF8C00', width=3),
+        marker=dict(size=10, color='#00FF7F'),
+        hovertemplate='Hora: %{y:.2f}h<extra></extra>'
+    ))
+
+    fig.update_layout(
+        paper_bgcolor='rgba(0,0,0,0)',
+        plot_bgcolor='rgba(0,0,0,0)',
+        margin=dict(l=10, r=10, t=10, b=10),
+        height=250,
+        xaxis=dict(showgrid=False, font=dict(color='white')),
+        yaxis=dict(
+            showgrid=True, gridcolor='#333', 
+            font=dict(color='white'),
+            tickformat='.2f',
+            title=dict(text="Hora (24h)", font=dict(color='#aaa', size=12))
+        )
+    )
+    st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
+    st.markdown("</div>", unsafe_allow_html=True)
+
+    # Cajas de Simbología y Conjunción
     st.markdown(f"""
     <div class="info-box">
         <p style="color:#FF8C00; font-weight:bold; margin-bottom:15px; font-size:17px;">Simbología:</p>
