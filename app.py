@@ -27,9 +27,6 @@ st.markdown("""
     .info-line { color: white; font-size: 15px; margin-bottom: 10px; display: flex; align-items: center; }
     .emoji-size { font-size: 22px; margin-right: 15px; width: 30px; text-align: center; }
     
-    .label-conjunction { color: #aaa; font-size: 14px; margin-bottom: 2px; margin-top: 8px; }
-    .data-conjunction { color: white; font-size: 16px; font-weight: bold; margin-bottom: 10px; }
-    
     .nasa-footer { margin-top: 30px; padding: 15px; border-top: 1px solid #333; text-align: center; }
     </style>
     """, unsafe_allow_html=True)
@@ -41,7 +38,7 @@ tab_mes, tab_anio = st.tabs(["📅 Vista Mensual", "🗓️ Año Completo"])
 ts = api.load.timescale()
 eph = api.load('de421.bsp')
 
-# --- FUNCIÓN TÉCNICA PARA NISÁN ---
+# --- LÓGICA TÉCNICA DE NISÁN ---
 def obtener_fechas_nisan(anio_objetivo):
     # 1. Buscar Equinoccio
     t_equi_0 = ts.from_datetime(tz_sv.localize(datetime(anio_objetivo, 3, 1)))
@@ -57,7 +54,7 @@ def obtener_fechas_nisan(anio_objetivo):
     
     c_luna = lunas_nuevas[0]
     dia_1 = c_luna + timedelta(days=(1 if c_luna.hour < 18 else 2))
-    n13 = dia_1 + timedelta(days=12) # Conteo inclusivo
+    n13 = dia_1 + timedelta(days=12) 
     
     # Regla del embolismo
     if n13.date() < f_equinoccio.date():
@@ -65,21 +62,20 @@ def obtener_fechas_nisan(anio_objetivo):
         dia_1 = c_luna + timedelta(days=(1 if c_luna.hour < 18 else 2))
         n13 = dia_1 + timedelta(days=12)
     
-    # Rango de Ázimos (15 al 21 de Nisán)
-    azimos_inicio = dia_1 + timedelta(days=14)
-    azimos_fin = dia_1 + timedelta(days=20)
+    # Rango de Ázimos: Inicia el día 15 de Nisán (Día 1 + 14 días)
+    az_inicio = dia_1 + timedelta(days=14)
+    az_fin = dia_1 + timedelta(days=20) # Día 21 de Nisán
     
-    return n13, azimos_inicio, azimos_fin
+    return n13, az_inicio, az_fin
 
 with tab_mes:
     col_a, col_m = st.columns(2)
     with col_a: anio = st.number_input("Año", 2024, 2030, hoy_sv.year, key="anio_m")
     with col_m: mes_id = st.number_input("Mes", 1, 12, hoy_sv.month, key="mes_m")
 
-    # Obtener fechas Nisán
     f_n13, f_az_ini, f_az_fin = obtener_fechas_nisan(anio)
 
-    # CÁLCULOS FASES LUNARES
+    # CÁLCULOS FASES
     fecha_inicio = tz_sv.localize(datetime(anio, mes_id, 1))
     t0 = ts.from_datetime(fecha_inicio - timedelta(days=3))
     ultimo_dia = calendar.monthrange(anio, mes_id)[1]
@@ -89,16 +85,11 @@ with tab_mes:
     
     fases_dict = {}
     seasons_dict = {ti.astimezone(tz_sv).day: yi for ti, yi in zip(t_seasons, y_seasons) if ti.astimezone(tz_sv).month == mes_id}
-    info_sv, info_utc = "---", "---"
     iconos_fases = {0: "🌑", 1: "🌓", 2: "🌕", 3: "🌗"}
 
     for ti, yi in zip(t_fases, y_fases):
         t_c = ti.astimezone(tz_sv)
         if yi == 0:
-            if t_c.month == mes_id:
-                info_sv = f"{dias_esp[t_c.weekday()]} {t_c.strftime('%d/%m/%y %I:%M %p')}"
-                info_utc = f"{dias_esp[t_c.astimezone(pytz.utc).weekday()]} {t_c.astimezone(pytz.utc).strftime('%d/%m/%y %H:%M')}"
-            
             desp = 1 if t_c.hour < 18 else 2
             t_celeb = t_c + timedelta(days=desp)
             if t_c.month == mes_id: fases_dict[t_c.day] = [0, "🌑"]
@@ -106,7 +97,7 @@ with tab_mes:
         elif t_c.month == mes_id:
             fases_dict[t_c.day] = [yi, iconos_fases[yi]]
 
-    # RENDER TABLA
+    # RENDER MENSUAL
     filas_html = ""
     for semana in calendar.Calendar(6).monthdayscalendar(anio, mes_id):
         fila = "<tr>"
@@ -114,17 +105,17 @@ with tab_mes:
             if dia == 0: fila += "<td></td>"
             else:
                 icons, b_style = "", "border: 1px solid #333; background: #1a1c23; border-radius: 10px; color: white;"
-                fecha_actual_loop = tz_sv.localize(datetime(anio, mes_id, dia))
+                f_actual = tz_sv.localize(datetime(anio, mes_id, dia))
                 
-                # REGLAS DE MARCADO
-                # 1. 13 de Nisán (ROJO)
+                # REGLAS DE PRIORIDAD
+                # 1. Cena del Señor (13 Nisán)
                 if dia == f_n13.day and mes_id == f_n13.month:
                     b_style = "border: 2px solid #FF0000; background: #2c0a0a; border-radius: 10px;"
                     icons = "🍷"
-                # 2. Ázimos (15-21 Nisán) (ROSA)
-                elif f_az_ini <= fecha_actual_loop <= f_az_fin:
-                    b_style = "border: 2px solid #FF69B4; background: #2c101c; border-radius: 10px;"
-                    icons = "🍞"
+                # 2. Ázimos (15-21 Nisán) - Rosa Pálido
+                elif f_az_ini <= f_actual <= f_az_fin:
+                    b_style = "border: 2px solid #FFC0CB; background: #241a1d; border-radius: 10px;"
+                    icons = "🫓"
                 else:
                     if mes_id == 3 and dia in seasons_dict and seasons_dict[dia] == 0:
                         icons += "🌸"
@@ -133,7 +124,6 @@ with tab_mes:
                         icons += dibujo
                         if tipo == "CELEB": b_style = "border: 2px solid #FF8C00; background: #2c1a0a; border-radius: 10px;"
                 
-                # Hoy
                 if dia == hoy_sv.day and mes_id == hoy_sv.month and anio == hoy_sv.year:
                     b_style = "border: 2px solid #00FF7F; background: #0a2c1a; border-radius: 10px;"
                 
@@ -149,25 +139,18 @@ with tab_mes:
     st.markdown(f"""
     <div class="info-box">
         <p style="color:#FF8C00; font-weight:bold; margin-bottom:15px; font-size:17px;">Simbología:</p>
-        <div class="info-line"><span class="emoji-size">✅</span> Hoy (Día actual)</div>
-        <div class="info-line"><span class="emoji-size">🍷</span> Cena del Señor (13 de Nisán)</div>
-        <div class="info-line"><span class="emoji-size">🍞</span> Ázimos (15-21 de Nisán)</div>
-        <div class="info-line"><span class="emoji-size">🌑</span> Conjunción | <span class="emoji-size">🌘</span> Día 1</div>
-    </div>
-    <div class="info-box">
-        <p style="color:#FF8C00; font-weight:bold; margin-bottom:5px; font-size:17px;">Próxima Conjunción:</p>
-        <p class="data-conjunction">{info_sv} (SV)</p>
+        <div class="info-line"><span class="emoji-size">🍷</span> 13 de Nisán (Cena del Señor)</div>
+        <div class="info-line"><span class="emoji-size">🫓</span> 15-21 de Nisán (Ázimos)</div>
+        <div class="info-line"><span class="emoji-size">🌘</span> Día 1 de Aviv (Celebración)</div>
     </div>
     """, unsafe_allow_html=True)
 
 with tab_anio:
     anio_full = st.number_input("Año Completo", 2024, 2030, hoy_sv.year, key="anio_f")
-    fn13_a, faz_i_a, faz_f_a = obtener_fechas_nisan(anio_full)
+    fn13_a, fazi_a, fazf_a = obtener_fechas_nisan(anio_full)
     
     grid_html = "<div style='display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; padding-bottom: 20px;'>"
     for m in range(1, 13):
-        f_ini = tz_sv.localize(datetime(anio_full, m, 1))
-        # ... (lógica de meses simplificada para el grid)
         mes_html = f"<div style='background:#1a1c23; padding:10px; border-radius:10px; border:1px solid #333; color:white;'>"
         mes_html += f"<div style='color:#FF8C00; font-weight:bold; text-align:center; margin-bottom:5px;'>{meses_completos[m-1]}</div>"
         mes_html += "<table style='width:100%; font-size:11px; text-align:center; border-collapse:collapse;'>"
@@ -181,10 +164,8 @@ with tab_anio:
                     f_loop = tz_sv.localize(datetime(anio_full, m, d))
                     if d == fn13_a.day and m == fn13_a.month:
                         est += "border: 1.5px solid #FF0000; background: rgba(255,0,0,0.3); border-radius: 4px;"
-                    elif faz_i_a <= f_loop <= faz_f_a:
-                        est += "border: 1.5px solid #FF69B4; background: rgba(255,105,180,0.3); border-radius: 4px;"
-                    elif d == hoy_sv.day and m == hoy_sv.month and anio_full == hoy_sv.year:
-                        est += "border: 1.5px solid #00FF7F; background: rgba(0,255,127,0.2); border-radius: 4px;"
+                    elif fazi_a <= f_loop <= fazf_a:
+                        est += "border: 1.5px solid #FFC0CB; background: rgba(255,192,203,0.15); border-radius: 4px;"
                     mes_html += f"<td><div style='{est}'>{d}</div></td>"
             mes_html += "</tr>"
         grid_html += mes_html + "</table></div>"
