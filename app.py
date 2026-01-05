@@ -15,7 +15,6 @@ hoy_sv = datetime.now(tz_sv)
 dias_esp = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"]
 meses_completos = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"]
 
-# COLOR GRIS ELEGANTE FIJO
 color_gris = "#2c303c"
 
 # 2. ESTILOS CSS
@@ -23,26 +22,18 @@ st.markdown(f"""
     <style>
     h1 {{ text-align: center; color: #FF8C00; font-size: 28px; }}
     .stTabs [data-baseweb="tab-list"] {{ justify-content: center; }}
-    
-    .info-box-v8 {{
+    .info-box-v9 {{
         padding: 15px; border-radius: 12px; 
         border: 1px solid rgba(128, 128, 128, 0.3); 
         margin-top: 15px; 
         background: {color_gris};
         color: white;
     }}
-    .linea-simbolo {{
-        display: flex;
-        align-items: center;
-        margin-bottom: 10px;
-        font-size: 16px;
-    }}
-    .emoji-guia {{
-        width: 35px;
-        font-size: 26px; /* FUENTE DE EMOJIS MÁS GRANDE */
-        margin-right: 12px;
-        text-align: center;
-    }}
+    .linea-simbolo {{ display: flex; align-items: center; margin-bottom: 10px; font-size: 16px; }}
+    .emoji-guia {{ width: 35px; font-size: 26px; margin-right: 12px; text-align: center; }}
+    
+    /* Ocultar el label de los selectores para que se vea más limpio */
+    div[data-testid="stSelectbox"] label {{ display: none; }}
     </style>
     """, unsafe_allow_html=True)
 
@@ -55,9 +46,14 @@ eph = api.load('de421.bsp')
 
 with tab_mes:
     c1, c2 = st.columns(2)
-    with c1: anio = st.number_input("Año", 2024, 2030, hoy_sv.year, key="y_v8")
-    with c2: mes_id = st.number_input("Mes", 1, 12, hoy_sv.month, key="m_v8")
+    # CAMBIO A SELECTBOX PARA EVITAR EL TECLADO
+    with c1: 
+        anios_lista = list(range(2024, 2031))
+        anio = st.selectbox("Año", anios_lista, index=anios_lista.index(hoy_sv.year), key="y_v9")
+    with c2: 
+        mes_id = st.selectbox("Mes", list(range(1, 13)), index=hoy_sv.month-1, key="m_v9")
 
+    # (Cálculos de fase lunar - se mantienen igual)
     t0 = ts.from_datetime(tz_sv.localize(datetime(anio, mes_id, 1)) - timedelta(days=3))
     t1 = ts.from_datetime(tz_sv.localize(datetime(anio, mes_id, calendar.monthrange(anio, mes_id)[1], 23, 59)))
     t_f, y_f = almanac.find_discrete(t0, t1, almanac.moon_phases(eph))
@@ -108,16 +104,15 @@ with tab_mes:
         </table>
     </div>""", height=460)
 
-    # 3. INFORMACIÓN CON EMOJIS MÁS GRANDES
     st.markdown(f"""
-    <div class="info-box-v8">
+    <div class="info-box-v9">
         <p style="color:#FF8C00; font-weight:bold; margin-bottom:12px; font-size:17px;">Simbología:</p>
         <div class="linea-simbolo"><span class="emoji-guia">✅</span> Hoy (Día actual)</div>
         <div class="linea-simbolo"><span class="emoji-guia">🌑</span> Conjunción (Luna Nueva)</div>
         <div class="linea-simbolo"><span class="emoji-guia">🌘</span> Día de Celebración</div>
         <div class="linea-simbolo"><span class="emoji-guia">🌕</span> Luna Llena</div>
     </div>
-    <div class="info-box-v8">
+    <div class="info-box-v9">
         <p style="color:#FF8C00; font-weight:bold; margin-bottom:10px; font-size:17px;">Próxima Conjunción:</p>
         <p style="margin:0; font-size:16px;">📍 El Salvador: <b>{info_sv}</b></p>
         <p style="margin:8px 0 0 0; font-size:16px;">🌍 Tiempo Universal: <b>{info_utc}</b></p>
@@ -125,7 +120,7 @@ with tab_mes:
     """, unsafe_allow_html=True)
 
 with tab_anio:
-    anio_f = st.number_input("Año", 2024, 2030, hoy_sv.year, key="a_v8", label_visibility="collapsed")
+    anio_f = st.selectbox("Seleccione Año", list(range(2024, 2031)), index=anios_lista.index(hoy_sv.year), key="a_v9")
     grid_h = "<div style='display:grid; grid-template-columns:1fr 1fr; gap:8px; width:94%; margin:auto;'>"
     for m in range(1, 13):
         t0_a = ts.from_datetime(tz_sv.localize(datetime(anio_f, m, 1)) - timedelta(days=3))
@@ -156,7 +151,7 @@ with tab_anio:
         grid_h += m_h + "</table></div>"
     components.html(grid_h + "</div>", height=1050)
 
-# 4. LEYENDA COMPLETA NASA Y NEJAPA
+# 4. LEYENDA COMPLETA
 st.markdown("""
     <hr style="border:0.1px solid rgba(128,128,128,0.2); margin-top:20px;">
     <div style="text-align: center; padding: 0 10px 30px 10px;">
