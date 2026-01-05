@@ -17,14 +17,13 @@ meses_completos = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio
 
 color_gris = "#2c303c"
 
-# 2. ESTILOS CSS PARA BLOQUEAR TECLADO Y MEJORAR VISTA
+# 2. ESTILOS CSS
 st.markdown(f"""
     <style>
     h1 {{ text-align: center; color: #FF8C00; font-size: 28px; }}
     .stTabs [data-baseweb="tab-list"] {{ justify-content: center; }}
     
-    /* Estilo para las cajas de información */
-    .info-box-v11 {{
+    .info-box-v12 {{
         padding: 15px; border-radius: 12px; 
         border: 1px solid rgba(128, 128, 128, 0.3); 
         margin-top: 15px; 
@@ -34,10 +33,9 @@ st.markdown(f"""
     .linea-simbolo {{ display: flex; align-items: center; margin-bottom: 10px; font-size: 16px; }}
     .emoji-guia {{ width: 35px; font-size: 26px; margin-right: 12px; text-align: center; }}
     
-    /* TRUCO: Evitar que el selectbox se vea gigante y que no pida foco de teclado */
-    div[data-testid="stSelectbox"] > div {{
-        background-color: {color_gris};
-        border-radius: 10px;
+    /* Forzamos que los selectores no tengan foco de edición */
+    div[data-testid="stSelectbox"] input {{
+        caret-color: transparent !important;
     }}
     </style>
     """, unsafe_allow_html=True)
@@ -52,13 +50,14 @@ eph = api.load('de421.bsp')
 with tab_mes:
     c1, c2 = st.columns(2)
     
-    # REGRESAMOS A LA SELECCIÓN DE LISTA (Selectbox no activa el teclado)
     with c1:
         lista_anios = list(range(2024, 2031))
-        anio = st.selectbox("Seleccione Año", lista_anios, index=lista_anios.index(hoy_sv.year), key="sel_anio")
+        anio = st.selectbox("Seleccione Año", lista_anios, index=lista_anios.index(hoy_sv.year), key="sel_anio_v12")
     
     with c2:
-        mes_id = st.selectbox("Seleccione Mes", list(range(1, 13)), index=hoy_sv.month-1, format_func=lambda x: meses_completos[x-1], key="sel_mes")
+        # CAMBIO CLAVE: Usamos los nombres directamente para que el móvil no crea que es un número
+        mes_nombre = st.selectbox("Seleccione Mes", meses_completos, index=hoy_sv.month-1, key="sel_mes_v12")
+        mes_id = meses_completos.index(mes_nombre) + 1
 
     # Cálculos astronómicos
     t0 = ts.from_datetime(tz_sv.localize(datetime(anio, mes_id, 1)) - timedelta(days=3))
@@ -83,7 +82,7 @@ with tab_mes:
         elif t_c.month == mes_id:
             fases_dict[t_c.day] = [yi, iconos[yi]]
 
-    # Calendario visual
+    # Tabla
     filas_html = ""
     for semana in calendar.Calendar(6).monthdayscalendar(anio, mes_id):
         fila = "<tr>"
@@ -112,16 +111,16 @@ with tab_mes:
         </table>
     </div>""", height=460)
 
-    # Simbología corregida
+    # Simbología
     st.markdown(f"""
-    <div class="info-box-v11">
+    <div class="info-box-v12">
         <p style="color:#FF8C00; font-weight:bold; margin-bottom:12px; font-size:17px;">Simbología:</p>
         <div class="linea-simbolo"><span class="emoji-guia">✅</span> Hoy (Día actual)</div>
         <div class="linea-simbolo"><span class="emoji-guia">🌑</span> Conjunción (Luna Nueva)</div>
         <div class="linea-simbolo"><span class="emoji-guia">🌘</span> Día de Celebración</div>
         <div class="linea-simbolo"><span class="emoji-guia">🌕</span> Luna Llena</div>
     </div>
-    <div class="info-box-v11">
+    <div class="info-box-v12">
         <p style="color:#FF8C00; font-weight:bold; margin-bottom:10px; font-size:17px;">Próxima Conjunción:</p>
         <p style="margin:0; font-size:16px;">📍 El Salvador: <b>{info_sv}</b></p>
         <p style="margin:8px 0 0 0; font-size:16px;">🌍 Tiempo Universal: <b>{info_utc}</b></p>
@@ -129,7 +128,7 @@ with tab_mes:
     """, unsafe_allow_html=True)
 
 with tab_anio:
-    anio_f = st.selectbox("Año a visualizar", lista_anios, index=lista_anios.index(hoy_sv.year), key="sel_anio_tab")
+    anio_f = st.selectbox("Año a visualizar", lista_anios, index=lista_anios.index(hoy_sv.year), key="sel_anio_tab_v12")
     grid_h = "<div style='display:grid; grid-template-columns:1fr 1fr; gap:8px; width:94%; margin:auto;'>"
     for m in range(1, 13):
         t0_a = ts.from_datetime(tz_sv.localize(datetime(anio_f, m, 1)) - timedelta(days=3))
@@ -160,7 +159,6 @@ with tab_anio:
         grid_h += m_h + "</table></div>"
     components.html(grid_h + "</div>", height=1050)
 
-# Leyenda final
 st.markdown("""
     <hr style="border:0.1px solid rgba(128,128,128,0.2); margin-top:20px;">
     <div style="text-align: center; padding: 0 10px 30px 10px;">
