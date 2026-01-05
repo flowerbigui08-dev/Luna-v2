@@ -38,18 +38,18 @@ tab_mes, tab_anio = st.tabs(["📅 Vista Mensual", "🗓️ Año Completo"])
 ts = api.load.timescale()
 eph = api.load('de421.bsp')
 
-# --- LÓGICA TÉCNICA DE NISÁN ---
+# --- LÓGICA TÉCNICA DE NISÁN CORREGIDA ---
 def obtener_fechas_nisan(anio_objetivo):
     # 1. Buscar Equinoccio
-    t_equi_0 = ts.from_datetime(tz_sv.localize(datetime(anio_objetivo, 3, 1)))
-    t_equi_1 = ts.from_datetime(tz_sv.localize(datetime(anio_objetivo, 3, 31)))
-    t_eq, y_eq = almanac.find_discrete(t_equi_0, t_equi_1, almanac.seasons(eph))
+    t0 = ts.from_datetime(tz_sv.localize(datetime(anio_objetivo, 3, 1)))
+    t1 = ts.from_datetime(tz_sv.localize(datetime(anio_objetivo, 3, 31)))
+    t_eq, y_eq = almanac.find_discrete(t0, t1, almanac.seasons(eph))
     f_equinoccio = t_eq[0].astimezone(tz_sv) if len(t_eq) > 0 else tz_sv.localize(datetime(anio_objetivo, 3, 20))
 
     # 2. Buscar Conjunciones
-    t_luna_0 = ts.from_datetime(tz_sv.localize(datetime(anio_objetivo, 3, 1)))
-    t_luna_1 = ts.from_datetime(tz_sv.localize(datetime(anio_objetivo, 5, 1)))
-    t_f, y_f = almanac.find_discrete(t_luna_0, t_luna_1, almanac.moon_phases(eph))
+    tl0 = ts.from_datetime(tz_sv.localize(datetime(anio_objetivo, 3, 1)))
+    tl1 = ts.from_datetime(tz_sv.localize(datetime(anio_objetivo, 5, 1)))
+    t_f, y_f = almanac.find_discrete(tl0, tl1, almanac.moon_phases(eph))
     lunas_nuevas = [ti.astimezone(tz_sv) for ti, yi in zip(t_f, y_f) if yi == 0]
     
     c_luna = lunas_nuevas[0]
@@ -62,9 +62,10 @@ def obtener_fechas_nisan(anio_objetivo):
         dia_1 = c_luna + timedelta(days=(1 if c_luna.hour < 18 else 2))
         n13 = dia_1 + timedelta(days=12)
     
-    # Rango de Ázimos: Inicia el día 15 de Nisán (Día 1 + 14 días)
-    az_inicio = dia_1 + timedelta(days=14)
-    az_fin = dia_1 + timedelta(days=20) # Día 21 de Nisán
+    # AJUSTE DE RANGOS:
+    # Si Nisán 13 es n13, Nisán 15 es n13 + 2 días.
+    az_inicio = n13 + timedelta(days=2)
+    az_fin = n13 + timedelta(days=8) # Hasta Nisán 21
     
     return n13, az_inicio, az_fin
 
@@ -77,11 +78,11 @@ with tab_mes:
 
     # CÁLCULOS FASES
     fecha_inicio = tz_sv.localize(datetime(anio, mes_id, 1))
-    t0 = ts.from_datetime(fecha_inicio - timedelta(days=3))
+    t0_m = ts.from_datetime(fecha_inicio - timedelta(days=3))
     ultimo_dia = calendar.monthrange(anio, mes_id)[1]
-    t1 = ts.from_datetime(fecha_inicio + timedelta(days=ultimo_dia))
-    t_fases, y_fases = almanac.find_discrete(t0, t1, almanac.moon_phases(eph))
-    t_seasons, y_seasons = almanac.find_discrete(t0, t1, almanac.seasons(eph))
+    t1_m = ts.from_datetime(fecha_inicio + timedelta(days=ultimo_dia))
+    t_fases, y_fases = almanac.find_discrete(t0_m, t1_m, almanac.moon_phases(eph))
+    t_seasons, y_seasons = almanac.find_discrete(t0_m, t1_m, almanac.seasons(eph))
     
     fases_dict = {}
     seasons_dict = {ti.astimezone(tz_sv).day: yi for ti, yi in zip(t_seasons, y_seasons) if ti.astimezone(tz_sv).month == mes_id}
@@ -107,13 +108,11 @@ with tab_mes:
                 icons, b_style = "", "border: 1px solid #333; background: #1a1c23; border-radius: 10px; color: white;"
                 f_actual = tz_sv.localize(datetime(anio, mes_id, dia))
                 
-                # REGLAS DE PRIORIDAD
-                # 1. Cena del Señor (13 Nisán)
+                # REGLAS DE PRIORIDAD CORREGIDAS
                 if dia == f_n13.day and mes_id == f_n13.month:
                     b_style = "border: 2px solid #FF0000; background: #2c0a0a; border-radius: 10px;"
                     icons = "🍷"
-                # 2. Ázimos (15-21 Nisán) - Rosa Pálido
-                elif f_az_ini <= f_actual <= f_az_fin:
+                elif f_az_ini.date() <= f_actual.date() <= f_az_fin.date():
                     b_style = "border: 2px solid #FFC0CB; background: #241a1d; border-radius: 10px;"
                     icons = "🫓"
                 else:
@@ -141,7 +140,6 @@ with tab_mes:
         <p style="color:#FF8C00; font-weight:bold; margin-bottom:15px; font-size:17px;">Simbología:</p>
         <div class="info-line"><span class="emoji-size">🍷</span> 13 de Nisán (Cena del Señor)</div>
         <div class="info-line"><span class="emoji-size">🫓</span> 15-21 de Nisán (Ázimos)</div>
-        <div class="info-line"><span class="emoji-size">🌘</span> Día 1 de Aviv (Celebración)</div>
     </div>
     """, unsafe_allow_html=True)
 
@@ -161,10 +159,10 @@ with tab_anio:
                 if d == 0: mes_html += "<td></td>"
                 else:
                     est = "padding: 2px;"
-                    f_loop = tz_sv.localize(datetime(anio_full, m, d))
+                    f_l = tz_sv.localize(datetime(anio_full, m, d))
                     if d == fn13_a.day and m == fn13_a.month:
                         est += "border: 1.5px solid #FF0000; background: rgba(255,0,0,0.3); border-radius: 4px;"
-                    elif fazi_a <= f_loop <= fazf_a:
+                    elif fazi_a.date() <= f_l.date() <= fazf_a.date():
                         est += "border: 1.5px solid #FFC0CB; background: rgba(255,192,203,0.15); border-radius: 4px;"
                     mes_html += f"<td><div style='{est}'>{d}</div></td>"
             mes_html += "</tr>"
