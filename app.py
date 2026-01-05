@@ -17,30 +17,42 @@ meses_completos = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio
 
 color_gris = "#2c303c"
 
-# MANEJO DE ESTADO PARA LOS BOTONES (Evita que salte el teclado)
+# ESTADO PARA NAVEGACIÓN
 if 'anio_val' not in st.session_state:
     st.session_state.anio_val = hoy_sv.year
 if 'mes_val' not in st.session_state:
     st.session_state.mes_val = hoy_sv.month
 
-# 2. ESTILOS CSS
+# 2. ESTILOS CSS REFORZADOS
 st.markdown(f"""
     <style>
-    h1 {{ text-align: center; color: #FF8C00; font-size: 28px; margin-bottom: 20px; }}
+    h1 {{ text-align: center; color: #FF8C00; font-size: 26px; margin-bottom: 10px; }}
     .stTabs [data-baseweb="tab-list"] {{ justify-content: center; }}
     
-    /* Contenedor de Botones Estilo Stepper */
-    .stepper-cont {{
+    /* Caja del visor central */
+    .visor-central {{
         display: flex;
         align-items: center;
         justify-content: center;
         background: {color_gris};
-        border-radius: 12px;
-        padding: 5px;
-        border: 1px solid rgba(255,255,255,0.1);
+        color: white;
+        font-weight: bold;
+        font-size: 18px;
+        height: 45px;
+        border-radius: 8px;
+        border: 1px solid rgba(255,255,255,0.2);
+        margin-bottom: 10px;
     }}
     
-    .info-box-final {{
+    .label-guia {{
+        text-align: center;
+        color: #FF8C00;
+        font-size: 14px;
+        font-weight: bold;
+        margin-bottom: 5px;
+    }}
+
+    .info-box-v10 {{
         padding: 15px; border-radius: 12px; 
         border: 1px solid rgba(128, 128, 128, 0.3); 
         margin-top: 15px; 
@@ -49,6 +61,13 @@ st.markdown(f"""
     }}
     .linea-simbolo {{ display: flex; align-items: center; margin-bottom: 10px; font-size: 16px; }}
     .emoji-guia {{ width: 35px; font-size: 26px; margin-right: 12px; text-align: center; }}
+    
+    /* Ajuste de botones Streamlit para que no tengan margen extra */
+    div.stButton > button {{
+        width: 100%;
+        height: 45px;
+        font-size: 20px;
+    }}
     </style>
     """, unsafe_allow_html=True)
 
@@ -60,29 +79,35 @@ ts = api.load.timescale()
 eph = api.load('de421.bsp')
 
 with tab_mes:
-    # FILA DE BOTONES PERSONALIZADOS
-    col1, col2 = st.columns(2)
+    # FILA DE CONTROLADORES
+    c_izq, c_der = st.columns(2)
     
-    with col1:
-        st.write("📅 Año")
-        ca1, ca2, ca3 = st.columns([1,2,1])
-        if ca1.button("➖", key="dec_a"): st.session_state.anio_val -= 1
-        ca2.markdown(f"<div class='stepper-cont'><b>{st.session_state.anio_val}</b></div>", unsafe_allow_html=True)
-        if ca3.button("➕", key="inc_a"): st.session_state.anio_val += 1
-        
-    with col2:
-        st.write("📆 Mes")
-        cm1, cm2, cm3 = st.columns([1,2,1])
-        if cm1.button("➖", key="dec_m"):
-            if st.session_state.mes_val > 1: st.session_state.mes_val -= 1
-        cm2.markdown(f"<div class='stepper-cont'><b>{meses_completos[st.session_state.mes_val-1]}</b></div>", unsafe_allow_html=True)
-        if cm3.button("➕", key="inc_m"):
-            if st.session_state.mes_val < 12: st.session_state.mes_val += 1
+    with c_izq:
+        st.markdown("<div class='label-guia'>Año</div>", unsafe_allow_html=True)
+        ba1, ba2, ba3 = st.columns([1,2,1])
+        with ba1: 
+            if st.button("➖", key="a_menos"): st.session_state.anio_val -= 1
+        with ba2:
+            st.markdown(f"<div class='visor-central'>{st.session_state.anio_val}</div>", unsafe_allow_html=True)
+        with ba3:
+            if st.button("➕", key="a_mas"): st.session_state.anio_val += 1
+            
+    with c_der:
+        st.markdown("<div class='label-guia'>Mes</div>", unsafe_allow_html=True)
+        bm1, bm2, bm3 = st.columns([1,2,1])
+        with bm1:
+            if st.button("➖", key="m_menos"):
+                if st.session_state.mes_val > 1: st.session_state.mes_val -= 1
+        with bm2:
+            st.markdown(f"<div class='visor-central'>{meses_completos[st.session_state.mes_val-1]}</div>", unsafe_allow_html=True)
+        with bm3:
+            if st.button("➕", key="m_mas"):
+                if st.session_state.mes_val < 12: st.session_state.mes_val += 1
 
     anio = st.session_state.anio_val
     mes_id = st.session_state.mes_val
 
-    # Cálculos astronómicos
+    # Cálculos
     t0 = ts.from_datetime(tz_sv.localize(datetime(anio, mes_id, 1)) - timedelta(days=3))
     t1 = ts.from_datetime(tz_sv.localize(datetime(anio, mes_id, calendar.monthrange(anio, mes_id)[1], 23, 59)))
     t_f, y_f = almanac.find_discrete(t0, t1, almanac.moon_phases(eph))
@@ -105,7 +130,7 @@ with tab_mes:
         elif t_c.month == mes_id:
             fases_dict[t_c.day] = [yi, iconos[yi]]
 
-    # Tabla del Calendario
+    # Tabla
     filas_html = ""
     for semana in calendar.Calendar(6).monthdayscalendar(anio, mes_id):
         fila = "<tr>"
@@ -133,16 +158,16 @@ with tab_mes:
         </table>
     </div>""", height=460)
 
-    # Info Boxes
+    # Info
     st.markdown(f"""
-    <div class="info-box-final">
+    <div class="info-box-v10">
         <p style="color:#FF8C00; font-weight:bold; margin-bottom:12px; font-size:17px;">Simbología:</p>
         <div class="linea-simbolo"><span class="emoji-guia">✅</span> Hoy (Día actual)</div>
         <div class="linea-simbolo"><span class="emoji-guia">🌑</span> Conjunción (Luna Nueva)</div>
         <div class="linea-simbolo"><span class="emoji-guia">🌘</span> Día de Celebración</div>
         <div class="linea-simbolo"><span class="emoji-guia">🌕</span> Luna Llena</div>
     </div>
-    <div class="info-box-final">
+    <div class="info-box-v10">
         <p style="color:#FF8C00; font-weight:bold; margin-bottom:10px; font-size:17px;">Próxima Conjunción:</p>
         <p style="margin:0; font-size:16px;">📍 El Salvador: <b>{info_sv}</b></p>
         <p style="margin:8px 0 0 0; font-size:16px;">🌍 Tiempo Universal: <b>{info_utc}</b></p>
@@ -150,11 +175,14 @@ with tab_mes:
     """, unsafe_allow_html=True)
 
 with tab_anio:
-    st.write("📅 Seleccione Año")
-    ca1_a, ca2_a, ca3_a = st.columns([1,2,1])
-    if ca1_a.button("➖", key="dec_aa"): st.session_state.anio_val -= 1
-    ca2_a.markdown(f"<div class='stepper-cont'><b>{st.session_state.anio_val}</b></div>", unsafe_allow_html=True)
-    if ca3_a.button("➕", key="inc_aa"): st.session_state.anio_val += 1
+    st.markdown("<div class='label-guia'>Navegar Año</div>", unsafe_allow_html=True)
+    ba1_a, ba2_a, ba3_a = st.columns([1,2,1])
+    with ba1_a: 
+        if st.button("➖", key="aa_menos"): st.session_state.anio_val -= 1
+    with ba2_a:
+        st.markdown(f"<div class='visor-central'>{st.session_state.anio_val}</div>", unsafe_allow_html=True)
+    with ba3_a:
+        if st.button("➕", key="aa_mas"): st.session_state.anio_val += 1
     
     anio_f = st.session_state.anio_val
     grid_h = "<div style='display:grid; grid-template-columns:1fr 1fr; gap:8px; width:94%; margin:auto;'>"
