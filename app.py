@@ -6,29 +6,40 @@ from datetime import datetime, timedelta
 import pytz
 import calendar
 
-# 1. CONFIGURACIÓN
+# 1. CONFIGURACIÓN Y ESTADO
 st.set_page_config(page_title="Luna SV", layout="wide")
 tz_sv = pytz.timezone('America/El_Salvador')
 hoy_sv = datetime.now(tz_sv)
 
 dias_esp = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"]
 meses_completos = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"]
-
 color_gris = "#2c303c"
 
-# MANEJO DE ESTADO (Para que las flechas funcionen)
-if 'anio_v' not in st.session_state:
-    st.session_state.anio_v = hoy_sv.year
-if 'mes_v' not in st.session_state:
-    st.session_state.mes_v = hoy_sv.month
+if 'anio_v' not in st.session_state: st.session_state.anio_v = hoy_sv.year
+if 'mes_v' not in st.session_state: st.session_state.mes_v = hoy_sv.month
 
-# 2. ESTILOS CSS
+# FUNCIONES DE CAMBIO INSTANTÁNEO
+def cambiar_mes(delta):
+    nueva_v = st.session_state.mes_v + delta
+    if nueva_v > 12:
+        st.session_state.mes_v = 1
+        st.session_state.anio_v += 1
+    elif nueva_v < 1:
+        st.session_state.mes_v = 12
+        st.session_state.anio_v -= 1
+    else:
+        st.session_state.mes_v = nueva_v
+
+def cambiar_anio(delta):
+    st.session_state.anio_v += delta
+
+# 2. ESTILOS CSS (Ajuste especial para Celular)
 st.markdown(f"""
     <style>
-    h1 {{ text-align: center; color: #FF8C00; font-size: 26px; }}
+    h1 {{ text-align: center; color: #FF8C00; font-size: 24px; margin-bottom: 5px; }}
     .stTabs [data-baseweb="tab-list"] {{ justify-content: center; }}
     
-    /* Contenedor del Visor */
+    /* Visor Compacto para Celular */
     .visor-flechas {{
         display: flex;
         align-items: center;
@@ -36,68 +47,57 @@ st.markdown(f"""
         background: {color_gris};
         color: white;
         font-weight: bold;
-        font-size: 18px;
-        height: 45px;
+        font-size: 14px;
+        height: 40px;
         border-radius: 8px;
         border: 1px solid rgba(255,255,255,0.2);
+    }}
+    
+    /* Forzar botones pequeños y pegados */
+    div.stButton > button {{
+        width: 100% !important;
+        padding: 0px !important;
+        height: 40px !important;
+        font-size: 18px !important;
     }}
     
     .label-mini {{
         text-align: center;
         color: #FF8C00;
-        font-size: 12px;
+        font-size: 11px;
+        font-weight: bold;
         margin-bottom: 2px;
-    }}
-
-    .info-box-v13 {{
-        padding: 15px; border-radius: 12px; 
-        border: 1px solid rgba(128, 128, 128, 0.3); 
-        margin-top: 15px; 
-        background: {color_gris};
-        color: white;
-    }}
-    .linea-simbolo {{ display: flex; align-items: center; margin-bottom: 10px; font-size: 16px; }}
-    .emoji-guia {{ width: 35px; font-size: 26px; margin-right: 12px; text-align: center; }}
-    
-    /* Estilo de los botones de flecha */
-    div.stButton > button {{
-        width: 100%;
-        border-radius: 8px;
-        border: 1px solid rgba(255,255,255,0.1);
-        height: 45px;
     }}
     </style>
     """, unsafe_allow_html=True)
 
 st.markdown("<h1>🌙 Calendario Lunar</h1>", unsafe_allow_html=True)
 
-tab_mes, tab_anio = st.tabs(["📅 Vista Mensual", "🗓️ Año Completo"])
+tab_mes, tab_anio = st.tabs(["📅 Mensual", "🗓️ Anual"])
 
 ts = api.load.timescale()
 eph = api.load('de421.bsp')
 
 with tab_mes:
-    # FILA DE NAVEGACIÓN
-    col_a, col_m = st.columns(2)
+    # FILA DE NAVEGACIÓN (Diseño ultra-compacto)
+    c_anio, c_mes = st.columns(2)
     
-    with col_a:
+    with c_anio:
         st.markdown("<p class='label-mini'>AÑO</p>", unsafe_allow_html=True)
         ba1, ba2, ba3 = st.columns([1,2,1])
-        if ba1.button("◀️", key="btn_a1"): st.session_state.anio_v -= 1
+        ba1.button("◀️", key="a1", on_click=cambiar_anio, args=(-1,))
         ba2.markdown(f"<div class='visor-flechas'>{st.session_state.anio_v}</div>", unsafe_allow_html=True)
-        if ba3.button("▶️", key="btn_a2"): st.session_state.anio_v += 1
+        ba3.button("▶️", key="a2", on_click=cambiar_anio, args=(1,))
             
-    with col_m:
+    with c_mes:
         st.markdown("<p class='label-mini'>MES</p>", unsafe_allow_html=True)
         bm1, bm2, bm3 = st.columns([1,2,1])
-        if bm1.button("◀️", key="btn_m1"):
-            st.session_state.mes_v = 12 if st.session_state.mes_v == 1 else st.session_state.mes_v - 1
-        bm2.markdown(f"<div class='visor-flechas'>{meses_completos[st.session_state.mes_v-1]}</div>", unsafe_allow_html=True)
-        if bm3.button("▶️", key="btn_m2"):
-            st.session_state.mes_v = 1 if st.session_state.mes_v == 12 else st.session_state.mes_v + 1
+        bm1.button("◀️", key="m1", on_click=cambiar_mes, args=(-1,))
+        nombre_mes_vis = meses_completos[st.session_state.mes_v-1][:4] + "." if len(meses_completos[st.session_state.mes_v-1]) > 5 else meses_completos[st.session_state.mes_v-1]
+        bm2.markdown(f"<div class='visor-flechas'>{nombre_mes_vis}</div>", unsafe_allow_html=True)
+        bm3.button("▶️", key="m2", on_click=cambiar_mes, args=(1,))
 
-    anio = st.session_state.anio_v
-    mes_id = st.session_state.mes_v
+    anio, mes_id = st.session_state.anio_v, st.session_state.mes_v
 
     # Cálculos Astronómicos
     t0 = ts.from_datetime(tz_sv.localize(datetime(anio, mes_id, 1)) - timedelta(days=3))
@@ -122,7 +122,7 @@ with tab_mes:
         elif t_c.month == mes_id:
             fases_dict[t_c.day] = [yi, iconos[yi]]
 
-    # Render de la Tabla
+    # Render del Calendario (Ajustado para que no se desborde)
     filas_html = ""
     for semana in calendar.Calendar(6).monthdayscalendar(anio, mes_id):
         fila = "<tr>"
@@ -137,45 +137,35 @@ with tab_mes:
                 if dia == hoy_sv.day and mes_id == hoy_sv.month and anio == hoy_sv.year:
                     b_style = f"border: 2px solid #00FF7F; background: #243d30;"
 
-                fila += f"""<td style='padding:4px;'><div style='{b_style} height:70px; border-radius:10px; padding:6px; box-sizing:border-box;'>
-                        <div style='color:white; font-weight:bold; font-size:14px;'>{dia}</div>
-                        <div style='text-align:center; font-size:24px;'>{ico}</div></div></td>"""
+                fila += f"""<td style='padding:2px;'><div style='{b_style} height:60px; border-radius:8px; padding:4px; box-sizing:border-box;'>
+                        <div style='color:white; font-weight:bold; font-size:12px;'>{dia}</div>
+                        <div style='text-align:center; font-size:20px;'>{ico}</div></div></td>"""
         filas_html += fila + "</tr>"
 
     components.html(f"""
     <div style='font-family:sans-serif;'>
+        <h4 style='text-align:center; color:#FF8C00; margin:5px;'>{meses_completos[mes_id-1]} {anio}</h4>
         <table style='width:100%; table-layout:fixed; border-collapse:collapse;'>
-            <tr style='color:#FF4B4B; text-align:center; font-weight:bold;'><td>D</td><td>L</td><td>M</td><td>M</td><td>J</td><td>V</td><td>S</td></tr>
+            <tr style='color:#FF4B4B; text-align:center; font-weight:bold; font-size:12px;'><td>D</td><td>L</td><td>M</td><td>M</td><td>J</td><td>V</td><td>S</td></tr>
             {filas_html}
         </table>
-    </div>""", height=460)
+    </div>""", height=420)
 
-    # Cajas de Información
+    # Info Boxes
     st.markdown(f"""
-    <div class="info-box-v13">
-        <p style="color:#FF8C00; font-weight:bold; margin-bottom:12px; font-size:17px;">Simbología:</p>
-        <div class="linea-simbolo"><span class="emoji-guia">✅</span> Hoy (Día actual)</div>
-        <div class="linea-simbolo"><span class="emoji-guia">🌑</span> Conjunción (Luna Nueva)</div>
-        <div class="linea-simbolo"><span class="emoji-guia">🌘</span> Día de Celebración</div>
-        <div class="linea-simbolo"><span class="emoji-guia">🌕</span> Luna Llena</div>
-    </div>
-    <div class="info-box-v13">
-        <p style="color:#FF8C00; font-weight:bold; margin-bottom:10px; font-size:17px;">Próxima Conjunción:</p>
-        <p style="margin:0; font-size:16px;">📍 El Salvador: <b>{info_sv}</b></p>
-        <p style="margin:8px 0 0 0; font-size:16px;">🌍 Tiempo Universal: <b>{info_utc}</b></p>
+    <div style="padding:12px; border-radius:12px; background:{color_gris}; color:white; border:1px solid rgba(255,255,255,0.1); margin-top:10px;">
+        <p style="color:#FF8C00; font-weight:bold; margin-bottom:8px; font-size:15px;">Próxima Conjunción:</p>
+        <p style="margin:0; font-size:14px;">📍 El Salvador: <b>{info_sv}</b></p>
+        <p style="margin:5px 0 0 0; font-size:14px;">🌍 Tiempo UTC: <b>{info_utc}</b></p>
     </div>
     """, unsafe_allow_html=True)
 
 with tab_anio:
-    st.markdown("<p class='label-mini'>NAVEGAR AÑO</p>", unsafe_allow_html=True)
-    ba1_a, ba2_a, ba3_a = st.columns([1,2,1])
-    if ba1_a.button("◀️", key="btn_aa1"): st.session_state.anio_v -= 1
-    ba2_a.markdown(f"<div class='visor-flechas'>{st.session_state.anio_v}</div>", unsafe_allow_html=True)
-    if ba3_a.button("▶️", key="btn_aa2"): st.session_state.anio_v += 1
-    
     anio_f = st.session_state.anio_v
-    grid_h = "<div style='display:grid; grid-template-columns:1fr 1fr; gap:8px; width:94%; margin:auto;'>"
+    st.markdown(f"<h3 style='text-align:center; color:#FF8C00;'>Año {anio_f}</h3>", unsafe_allow_html=True)
+    grid_h = "<div style='display:grid; grid-template-columns:1fr 1fr; gap:5px; width:100%;'>"
     for m in range(1, 13):
+        # (Cálculos de año completo omitidos por brevedad, se mantienen iguales)
         t0_a = ts.from_datetime(tz_sv.localize(datetime(anio_f, m, 1)) - timedelta(days=3))
         t1_a = ts.from_datetime(tz_sv.localize(datetime(anio_f, m, calendar.monthrange(anio_f, m)[1], 23, 59)))
         t_fa, y_fa = almanac.find_discrete(t0_a, t1_a, almanac.moon_phases(eph))
@@ -187,27 +177,20 @@ with tab_anio:
                 fc = dt + timedelta(days=ds)
                 if fc.month == m: cs.append(fc.day)
 
-        m_h = f"<div style='background:{color_gris}; padding:8px; border-radius:8px; border:1px solid #4a4e5a;'>"
-        m_h += f"<div style='color:#FF8C00; font-weight:bold; text-align:center; font-size:14px; margin-bottom:3px;'>{meses_completos[m-1]}</div>"
-        m_h += "<table style='width:100%; font-size:11px; text-align:center; color:white;'>"
-        m_h += "<tr style='color:#FF4B4B;'><td>D</td><td>L</td><td>M</td><td>M</td><td>J</td><td>V</td><td>S</td></tr>"
+        m_h = f"<div style='background:{color_gris}; padding:5px; border-radius:8px; border:1px solid #4a4e5a;'>"
+        m_h += f"<div style='color:#FF8C00; font-weight:bold; text-align:center; font-size:12px;'>{meses_completos[m-1][:3]}</div>"
+        m_h += "<table style='width:100%; font-size:9px; text-align:center; color:white;'>"
         for sem in calendar.Calendar(6).monthdayscalendar(anio_f, m):
             m_h += "<tr>"
             for d in sem:
                 if d == 0: m_h += "<td></td>"
                 else:
-                    style = "color:white; font-weight:bold;"
-                    if d in cs: style += f"border:1px solid #FF8C00; background:rgba(255,140,0,0.25); border-radius:3px;"
-                    if d == hoy_sv.day and m == hoy_sv.month and anio_f == hoy_sv.year: style += "border:1px solid #00FF7F; border-radius:3px;"
+                    style = ""
+                    if d in cs: style = "border:1px solid #FF8C00; background:rgba(255,140,0,0.2); border-radius:2px;"
+                    if d == hoy_sv.day and m == hoy_sv.month and anio_f == hoy_sv.year: style = "border:1px solid #00FF7F;"
                     m_h += f"<td><div style='{style}'>{d}</div></td>"
             m_h += "</tr>"
         grid_h += m_h + "</table></div>"
-    components.html(grid_h + "</div>", height=1050)
+    components.html(grid_h + "</div>", height=850)
 
-st.markdown("""
-    <hr style="border:0.1px solid rgba(128,128,128,0.2); margin-top:20px;">
-    <div style="text-align: center; padding: 0 10px 30px 10px;">
-        <p style="color: grey; font-size: 13px;"><b>Respaldo Científico:</b> Skyfield & JPL/NASA DE421.</p>
-        <p style="color: #FF8C00; font-size: 20px; font-weight: bold; font-style: italic;">Voz de la Tórtola, Nejapa.</p>
-    </div>
-    """, unsafe_allow_html=True)
+st.markdown(f"<p style='text-align:center; color:grey; font-size:11px; margin-top:15px;'>Voz de la Tórtola, Nejapa.</p>", unsafe_allow_html=True)
