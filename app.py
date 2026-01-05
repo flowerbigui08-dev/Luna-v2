@@ -9,7 +9,7 @@ import calendar
 # 1. CONFIGURACIÓN
 st.set_page_config(page_title="Luna SV", layout="wide")
 tz_sv = pytz.timezone('America/El_Salvador')
-loc_sv = wgs84.latlon(13.7667, -89.2333) # Nejapa
+loc_sv = wgs84.latlon(13.689, -89.187) # Coordenadas promedio El Salvador
 hoy_sv = datetime.now(tz_sv)
 
 dias_esp = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"]
@@ -30,10 +30,15 @@ st.markdown("""
     .label-conjunction { color: #aaa; font-size: 14px; margin-bottom: 2px; margin-top: 8px; }
     .data-conjunction { color: white; font-size: 16px; font-weight: bold; margin-bottom: 10px; }
     
-    .sunset-card {
-        background: linear-gradient(145deg, #1a1c23, #252830);
-        padding: 12px; border-radius: 10px; border-left: 4px solid #FF8C00; margin-bottom: 8px;
+    /* Estilo para la fila horizontal de puestas de sol */
+    .sunset-row {
+        display: flex; justify-content: space-around; align-items: center; 
+        background: #0e1117; padding: 12px; border-radius: 8px; border: 1px solid #444;
     }
+    .sunset-item { text-align: center; }
+    .sunset-day { color: #FF8C00; font-size: 11px; font-weight: bold; text-transform: uppercase; }
+    .sunset-time { color: white; font-size: 14px; font-weight: bold; display: block; }
+
     .nasa-footer { margin-top: 30px; padding: 15px; border-top: 1px solid #333; text-align: center; }
     </style>
     """, unsafe_allow_html=True)
@@ -101,26 +106,7 @@ with tab_mes:
     st.markdown(f"<h2 style='text-align:center; color:#FF8C00; margin-top:15px; font-size:22px;'>{meses_completos[mes_id-1]} {anio}</h2>", unsafe_allow_html=True)
     components.html(f"<style>table{{width:100%; border-collapse:collapse; font-family:sans-serif; table-layout:fixed;}} th{{color:#FF4B4B; padding-bottom:5px; text-align:center; font-weight:bold; font-size:14px;}}</style><table><tr><th>D</th><th>L</th><th>M</th><th>M</th><th>J</th><th>V</th><th>S</th></tr>{filas_html}</table>", height=440)
 
-    # --- NUEVA SECCIÓN: PUESTAS DE SOL (SIN LIBRERÍAS EXTRA) ---
-    st.markdown("<div class='info-box'><p style='color:#FF8C00; font-weight:bold; margin-bottom:15px; font-size:17px;'>🌅 Puestas de Sol (Nejapa)</p>", unsafe_allow_html=True)
-    
-    puntos_sol = [1, 10, 20, ultimo_dia]
-    for d in puntos_sol:
-        t_i = ts.from_datetime(tz_sv.localize(datetime(anio, mes_id, d, 12, 0)))
-        t_f = ts.from_datetime(tz_sv.localize(datetime(anio, mes_id, d, 23, 59)))
-        t_e, y_e = almanac.find_discrete(t_i, t_f, almanac.sunrise_sunset(eph, loc_sv))
-        for ti, yi in zip(t_e, y_e):
-            if yi == 0: # Ocaso
-                dt = ti.astimezone(tz_sv)
-                st.markdown(f"""
-                <div class="sunset-card">
-                    <span style="color:#aaa; font-size:13px;">Día {d}:</span><br>
-                    <span style="font-size:18px; font-weight:bold;">{dt.strftime('%I:%M:%p')}</span>
-                </div>
-                """, unsafe_allow_html=True)
-    st.markdown("</div>", unsafe_allow_html=True)
-
-    # Cajas de Simbología y Conjunción
+    # 1. Simbología
     st.markdown(f"""
     <div class="info-box">
         <p style="color:#FF8C00; font-weight:bold; margin-bottom:15px; font-size:17px;">Simbología:</p>
@@ -130,12 +116,42 @@ with tab_mes:
         <div class="info-line"><span class="emoji-size">🌸</span> Primavera (Marzo)</div>
         <div class="info-line"><span class="emoji-size">🌕</span> Luna Llena</div>
     </div>
+    """, unsafe_allow_html=True)
+
+    # 2. Próxima Conjunción
+    st.markdown(f"""
     <div class="info-box">
         <p style="color:#FF8C00; font-weight:bold; margin-bottom:5px; font-size:17px;">Próxima Conjunción:</p>
         <p class="label-conjunction">📍 El Salvador (SV):</p>
         <p class="data-conjunction">{info_sv}</p>
         <p class="label-conjunction">🌍 Tiempo Universal (UTC):</p>
         <p class="data-conjunction">{info_utc}</p>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # 3. Puestas de Sol (Ajustado abajo y resumido)
+    sunset_items_html = ""
+    puntos_sol = [1, 10, 20, ultimo_dia]
+    for d in puntos_sol:
+        t_i = ts.from_datetime(tz_sv.localize(datetime(anio, mes_id, d, 12, 0)))
+        t_f = ts.from_datetime(tz_sv.localize(datetime(anio, mes_id, d, 23, 59)))
+        t_e, y_e = almanac.find_discrete(t_i, t_f, almanac.sunrise_sunset(eph, loc_sv))
+        for ti, yi in zip(t_e, y_e):
+            if yi == 0:
+                dt = ti.astimezone(tz_sv)
+                sunset_items_html += f"""
+                <div class="sunset-item">
+                    <span class="sunset-day">Día {d}</span>
+                    <span class="sunset-time">{dt.strftime('%I:%M %p')}</span>
+                </div>
+                """
+    
+    st.markdown(f"""
+    <div class="info-box">
+        <p style="color:#FF8C00; font-weight:bold; margin-bottom:12px; font-size:17px;">🌅 Puesta del Sol (El Salvador)</p>
+        <div class="sunset-row">
+            {sunset_items_html}
+        </div>
     </div>
     """, unsafe_allow_html=True)
 
