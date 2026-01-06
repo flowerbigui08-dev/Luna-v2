@@ -55,11 +55,14 @@ def obtener_fechas_especiales(anio_objetivo):
     t_eq_0 = ts.from_datetime(tz_sv.localize(datetime(anio_objetivo, 3, 1)))
     t_eq_1 = ts.from_datetime(tz_sv.localize(datetime(anio_objetivo, 3, 31)))
     t_eq, _ = almanac.find_discrete(t_eq_0, t_eq_1, almanac.seasons(eph))
-    f_eq = t_eq[0].astimezone(tz_sv) if len(t_eq) > 0 else tz_sv.localize(datetime(anio_objetivo, 3, 20))
+    
+    # Guardamos el datetime completo para mostrar la hora después
+    f_eq_dt = t_eq[0].astimezone(tz_sv) if len(t_eq) > 0 else tz_sv.localize(datetime(anio_objetivo, 3, 20))
+    f_eq_date = f_eq_dt.date()
     
     c_luna_aviv = lunas_nuevas[0]
     dia_1_aviv = (c_luna_aviv + timedelta(days=(1 if c_luna_aviv.hour < 18 else 2))).date()
-    if (dia_1_aviv + timedelta(days=12)) < f_eq.date():
+    if (dia_1_aviv + timedelta(days=12)) < f_eq_date:
         c_luna_aviv = lunas_nuevas[1]
         dia_1_aviv = (c_luna_aviv + timedelta(days=(1 if c_luna_aviv.hour < 18 else 2))).date()
     
@@ -73,7 +76,9 @@ def obtener_fechas_especiales(anio_objetivo):
         "aviv_1": dia_1_aviv,
         "n13": dia_1_aviv + timedelta(days=12), 
         "az_ini": dia_1_aviv + timedelta(days=14), "az_fin": dia_1_aviv + timedelta(days=20), 
-        "omer_ini": dia_1_aviv + timedelta(days=15), "equinoccio": f_eq.date(),
+        "omer_ini": dia_1_aviv + timedelta(days=15), 
+        "equinoccio_dt": f_eq_dt,
+        "equinoccio_date": f_eq_date,
         "yom_kippur": dia_1_mes7 + timedelta(days=9),
         "sucot_ini": dia_1_mes7 + timedelta(days=14), "sucot_fin": dia_1_mes7 + timedelta(days=21)
     }
@@ -112,7 +117,6 @@ with tab_mes:
     
     st.markdown(f"<h2 style='text-align:center; color:#FF8C00; margin-bottom:5px;'>{meses_completos[mes_m-1]} {anio_m}</h2>", unsafe_allow_html=True)
     
-    # Subtítulo con el inicio del mes hebreo
     if celebs:
         dia_heb, nombre_heb = celebs[0]
         st.markdown(f"<div class='sub-title-heb'>{dia_heb.day} de {meses_completos[mes_m-1]}, 1 de {nombre_heb}</div>", unsafe_allow_html=True)
@@ -128,7 +132,6 @@ with tab_mes:
                 bg, border, omer_txt = "#1a1c23", "1px solid #333", ""
                 icons_list = []
                 
-                # Resaltar Día 1 lunar
                 if any(dia == c[0].day for c in celebs):
                     bg, border = "#2c1a0a", "2px solid #FF8C00"
                     icons_list.append("🌘")
@@ -144,7 +147,7 @@ with tab_mes:
                 elif f_act == esp["yom_kippur"]: bg, border = "#2c0a0a", "2px solid #FF0000"; icons_list.append("🐏")
                 elif esp["sucot_ini"] <= f_act <= esp["sucot_fin"]: bg, border = "#0a2c1a", "2px solid #3EB489"; icons_list.append("🌿")
                 
-                if f_act == esp["equinoccio"]: icons_list.append("🌸")
+                if f_act == esp["equinoccio_date"]: icons_list.append("🌸")
                 if dia in fases_mes: icons_list.append(iconos_fases[fases_mes[dia]])
                 if f_act == hoy_sv.date(): border = "2px solid #00FF7F"
 
@@ -155,8 +158,22 @@ with tab_mes:
     components.html(f"<style>table{{width:100%; border-collapse:collapse; table-layout:fixed; font-family:sans-serif;}} th{{color:#FF4B4B; padding:5px; font-size:14px;}}</style><table><tr><th>D</th><th>L</th><th>M</th><th>M</th><th>J</th><th>V</th><th>S</th></tr>{filas}</table>", height=550)
 
     if conjs:
-        c_sv = conjs[0].astimezone(tz_sv); c_utc = conjs[0].astimezone(tz_utc)
-        st.markdown(f"""<div class="conjunction-card"><p style="color:#FF8C00; font-weight:bold; font-size:15px; margin-bottom:5px;">Próxima Conjunción ({meses_completos[mes_m-1]}):</p><div class="label-city">📍 El Salvador (SV)</div><div class="time-data">{dias_esp[c_sv.strftime('%A')]} {c_sv.strftime('%d/%m/%y %I:%M %p')}</div><div class="label-city">🌍 Tiempo Universal (UTC)</div><div class="time-data">{dias_esp[c_utc.strftime('%A')]} {c_utc.strftime('%d/%m/%y')} {c_utc.strftime('%H:%M')} UTC</div></div>""", unsafe_allow_html=True)
+        c_sv = conjs[0].astimezone(tz_sv)
+        c_utc = conjs[0].astimezone(tz_utc)
+        eq_sv = esp["equinoccio_dt"]
+        
+        st.markdown(f"""
+        <div class="conjunction-card">
+            <p style="color:#FF8C00; font-weight:bold; font-size:15px; margin-bottom:5px;">Próxima Conjunción ({meses_completos[mes_m-1]}):</p>
+            <div class="label-city">📍 El Salvador (SV)</div>
+            <div class="time-data">{dias_esp[c_sv.strftime('%A')]} {c_sv.strftime('%d/%m/%y %I:%M %p')}</div>
+            <div class="label-city">🌍 Tiempo Universal (UTC)</div>
+            <div class="time-data">{dias_esp[c_utc.strftime('%A')]} {c_utc.strftime('%d/%m/%y')} {c_utc.strftime('%H:%M')} UTC</div>
+            <hr style="border: 0; border-top: 1px solid #333; margin: 10px 0;">
+            <p style="color:#3EB489; font-weight:bold; font-size:14px; margin-bottom:5px;">🌸 Equinoccio de Primavera {anio_m}:</p>
+            <div class="time-data">{dias_esp[eq_sv.strftime('%A')]} {eq_sv.strftime('%d')} de {meses_completos[eq_sv.month-1]} - {eq_sv.strftime('%I:%M %p')}</div>
+        </div>
+        """, unsafe_allow_html=True)
 
 with tab_anio:
     anio_f = st.number_input("Seleccionar Año", 2024, 2035, anio_m, key="input_anio_full")
@@ -184,7 +201,18 @@ with tab_anio:
 
 with tab_simb:
     st.markdown("<h3 style='color:#FF8C00; text-align:center;'>Guía de Marcadores</h3>", unsafe_allow_html=True)
-    simbs = [("🟢", "Día Actual"), ("🍷", "13 de Nisán (Cena del Señor)"), ("🫓", "15-21 Nisán (Ázimos)"), ("🌾", "Primicia (Omer 1)"), ("🐏", "10 Mes 7 (Expiación / Yom Kippur)"), ("🌿", "15-22 Mes 7 (Cabañas / Sucot)"), ("🔥", "Omer 50 (Shavuot)"), ("🌘", "Día 1 (Celebración / Observación)"), ("🌑", "Conjunción (Luna Nueva Astronómica)")]
+    simbs = [
+        ("🟢", "Día Actual"), 
+        ("🍷", "13 de Nisán (Cena del Señor)"), 
+        ("🫓", "15-21 Nisán (Ázimos)"), 
+        ("🌾", "Primicia (Omer 1)"), 
+        ("🐏", "10 Mes 7 (Expiación / Yom Kippur)"), 
+        ("🌿", "15-22 Mes 7 (Cabañas / Sucot)"), 
+        ("🔥", "Omer 50 (Shavuot)"), 
+        ("🌸", "Equinoccio de Primavera (Referencia Solar)"),
+        ("🌘", "Día 1 (Celebración / Observación)"), 
+        ("🌑", "Conjunción (Luna Nueva Astronómica)")
+    ]
     html_s = '<div class="info-box">'
     for e, t in simbs:
         html_s += f'<div class="symbol-row"><div class="symbol-emoji">{e}</div><div class="symbol-text"><b>{t}</b></div></div>'
