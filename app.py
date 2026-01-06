@@ -18,7 +18,7 @@ dias_esp = {
 
 meses_completos = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"]
 
-# ESTILOS CSS REFINADOS (Cuadrícula y Cajas)
+# ESTILOS CSS
 st.markdown("""
     <style>
     h1 { text-align: center; color: #FF8C00; margin-bottom: 0px; font-size: 26px; }
@@ -33,7 +33,8 @@ st.markdown("""
     .symbol-row { display: flex; align-items: center; border-bottom: 1px solid #222; padding: 8px 0; }
     .symbol-emoji { width: 35px; text-align: center; font-size: 18px; }
     .symbol-text { flex-grow: 1; font-size: 13px; margin-left: 12px; }
-    .signature { text-align: center; color: #FF8C00; font-size: 16px; font-weight: bold; font-style: italic; margin-top: 20px; }
+    .signature { text-align: center; color: #FF8C00; font-size: 20px; font-weight: bold; font-style: italic; margin-top: 30px; }
+    .footer-tech { text-align: center; color: #666; font-size: 11px; margin-top: 10px; border-top: 1px solid #333; padding-top: 10px; line-height: 1.6; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -76,7 +77,6 @@ def obtener_fechas_especiales(anio_objetivo):
 
 def obtener_datos_mes(anio, mes):
     inicio = tz_sv.localize(datetime(anio, mes, 1))
-    # Detección extendida para no perder el Día 1 si la conjunción fue el 29 o 30
     t0 = ts.from_datetime(inicio - timedelta(days=3))
     t1 = ts.from_datetime(inicio + timedelta(days=32))
     t_f, y_f = almanac.find_discrete(t0, t1, almanac.moon_phases(eph))
@@ -111,22 +111,18 @@ with tab_mes:
                 f_act = tz_sv.localize(datetime(anio_m, mes_m, dia)).date()
                 bg, border, omer_txt = "#1a1c23", "1px solid #333", ""
                 icons_list = []
-                
-                # 1. Omer (Número arriba a la derecha)
                 d_omer = (f_act - esp["omer_ini"]).days + 1
                 if 1 <= d_omer <= 50:
                     omer_txt = f"<div style='position:absolute; top:2px; right:4px; color:#9370DB; font-size:10px; font-weight:bold;'>{d_omer}</div>"
                     if d_omer == 1: icons_list.append("🌾")
                     elif d_omer == 50: icons_list.append("🔥")
 
-                # 2. Lógica de Festividades (Apilamiento)
                 if f_act == esp["n13"]: bg, border = "#2c0a0a", "2px solid #FF0000"; icons_list.append("🍷")
                 elif esp["az_ini"] <= f_act <= esp["az_fin"]: bg, border = "#241a1d", "2px solid #FFC0CB"; icons_list.append("🫓")
                 elif f_act == esp["yom_kippur"]: bg, border = "#2c0a0a", "2px solid #FF0000"; icons_list.append("🐏")
                 elif esp["sucot_ini"] <= f_act <= esp["sucot_fin"]: bg, border = "#0a2c1a", "2px solid #3EB489"; icons_list.append("🌿")
                 elif f_act in celebs: bg, border = "#2c1a0a", "2px solid #FF8C00"; icons_list.append("🌘")
                 
-                # 3. Fases y Equinoccio
                 if f_act == esp["equinoccio"]: icons_list.append("🌸")
                 if dia in fases_mes: icons_list.append(iconos_fases[fases_mes[dia]])
                 if f_act == hoy_sv.date(): border = "2px solid #00FF7F"
@@ -173,3 +169,7 @@ with tab_simb:
     for e, t in simbs:
         html_s += f'<div class="symbol-row"><div class="symbol-emoji">{e}</div><div class="symbol-text"><b>{t}</b></div></div>'
     st.markdown(html_s + '</div>', unsafe_allow_html=True)
+
+# --- CIERRE FINAL ---
+st.markdown("<div class='signature'>Voz de la Tórtola, Nejapa.</div>", unsafe_allow_html=True)
+st.markdown("<div class='footer-tech'><b>Respaldo Científico:</b> Efemérides Planetarias NASA DE421 / Algoritmos de Precisión USNO.<br>Cálculos astronómicos validados para la posición geográfica de El Salvador.</div>", unsafe_allow_html=True)
