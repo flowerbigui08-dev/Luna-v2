@@ -15,7 +15,7 @@ hoy_sv = datetime.now(tz_sv)
 dias_esp = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"]
 meses_completos = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"]
 
-# ESTILOS CSS
+# ESTILOS CSS REFINADOS
 st.markdown("""
     <style>
     h1 { text-align: center; color: #FF8C00; margin-bottom: 0px; font-size: 28px; }
@@ -24,46 +24,45 @@ st.markdown("""
     .stTabs [data-baseweb="tab-list"] { gap: 15px; justify-content: center; border-bottom: 1px solid #333; }
     .stTabs [data-baseweb="tab"] { font-size: 16px; font-weight: bold; }
     
+    /* Caja de Simbología con separador vertical */
     .info-box { background: #1a1c23; padding: 20px; border-radius: 15px; border: 1px solid #333; margin-top: 10px; color: white; }
-    .info-line { color: white; font-size: 16px; margin-bottom: 12px; display: flex; align-items: center; border-bottom: 1px solid #222; padding-bottom: 8px; }
-    .emoji-size { font-size: 24px; margin-right: 15px; width: 35px; text-align: center; }
+    .symbol-row { display: flex; align-items: center; border-bottom: 1px solid #222; padding: 10px 0; }
+    .symbol-emoji { width: 50px; text-align: center; font-size: 24px; flex-shrink: 0; }
+    .symbol-divider { width: 1px; height: 30px; background-color: #444; margin: 0 15px; flex-shrink: 0; }
+    .symbol-text { flex-grow: 1; font-size: 15px; line-height: 1.4; }
     
     .label-conjunction { color: #aaa; font-size: 14px; margin-bottom: 2px; margin-top: 15px; }
     .data-conjunction { color: white; font-size: 18px; font-weight: bold; margin-bottom: 15px; }
     
-    .nasa-footer { margin-top: 30px; padding: 20px; text-align: center; color: #888; font-size: 13px; line-height: 1.6; }
+    .signature-text { text-align: center; color: #FF8C00; font-size: 18px; font-weight: bold; font-style: italic; margin-top: 20px; }
+    .nasa-footer { margin-top: 30px; padding: 20px; text-align: center; color: #888; font-size: 13px; line-height: 1.6; border-top: 1px solid #333; }
     </style>
     """, unsafe_allow_html=True)
 
 st.markdown("<h1>🌙 Calendario Lunar</h1>", unsafe_allow_html=True)
 
-# 2. CREACIÓN DE LAS 3 PESTAÑAS
 tab_mes, tab_anio, tab_simb = st.tabs(["📅 Vista Mensual", "🗓️ Año Completo", "📖 Simbología"])
 
 ts = api.load.timescale()
 eph = api.load('de421.bsp')
 
-# --- FUNCIONES DE LÓGICA ---
+# --- LÓGICA DE FECHAS ---
 def obtener_fechas_especiales(anio_objetivo):
     t0 = ts.from_datetime(tz_sv.localize(datetime(anio_objetivo, 3, 1)))
     t1 = ts.from_datetime(tz_sv.localize(datetime(anio_objetivo, 3, 31)))
     t_eq, y_eq = almanac.find_discrete(t0, t1, almanac.seasons(eph))
     f_eq = t_eq[0].astimezone(tz_sv) if len(t_eq) > 0 else tz_sv.localize(datetime(anio_objetivo, 3, 20))
-
     tl0 = ts.from_datetime(tz_sv.localize(datetime(anio_objetivo, 3, 1)))
     tl1 = ts.from_datetime(tz_sv.localize(datetime(anio_objetivo, 5, 1)))
     t_f, y_f = almanac.find_discrete(tl0, tl1, almanac.moon_phases(eph))
     lunas_nuevas = [ti.astimezone(tz_sv) for ti, yi in zip(t_f, y_f) if yi == 0]
-    
     c_luna = lunas_nuevas[0]
     dia_1 = c_luna + timedelta(days=(1 if c_luna.hour < 18 else 2))
     n13 = dia_1 + timedelta(days=12) 
-    
     if n13.date() < f_eq.date():
         c_luna = lunas_nuevas[1]
         dia_1 = c_luna + timedelta(days=(1 if c_luna.hour < 18 else 2))
         n13 = dia_1 + timedelta(days=12)
-    
     return {"n13": n13, "az_ini": n13 + timedelta(days=2), "az_fin": n13 + timedelta(days=8), "equinoccio": f_eq}
 
 def obtener_celebraciones_mes(anio, mes):
@@ -80,16 +79,14 @@ def obtener_celebraciones_mes(anio, mes):
             celebs.append((fecha_c + timedelta(days=desp)).date())
     return celebs, conjs
 
-# --- CONTENIDO PESTAÑA 1: MES ---
+# --- PESTAÑA 1: MES ---
 with tab_mes:
     col_a, col_m = st.columns(2)
     with col_a: anio = st.number_input("Año", 2024, 2030, hoy_sv.year, key="anio_m")
     with col_m: mes_id = st.number_input("Mes", 1, 12, hoy_sv.month, key="mes_m")
-
-    especiales = obtener_fechas_especiales(anio)
-    celebs_mes, conjs_mes = obtener_celebraciones_mes(anio, mes_id)
-
-    # Fases generales para iconos
+    esp = obtener_fechas_especiales(anio)
+    celebs, _ = obtener_celebraciones_mes(anio, mes_id)
+    
     t0_f = ts.from_datetime(tz_sv.localize(datetime(anio, mes_id, 1)) - timedelta(days=1))
     t1_f = ts.from_datetime(tz_sv.localize(datetime(anio, mes_id, 1)) + timedelta(days=31))
     t_f_all, y_f_all = almanac.find_discrete(t0_f, t1_f, almanac.moon_phases(eph))
@@ -104,13 +101,10 @@ with tab_mes:
             else:
                 icons, b_style = "", "border: 1px solid #333; background: #1a1c23; border-radius: 10px;"
                 f_actual = tz_sv.localize(datetime(anio, mes_id, dia)).date()
-                if f_actual == especiales["n13"].date():
-                    b_style, icons = "border: 2px solid #FF0000; background: #2c0a0a; border-radius: 10px;", "🍷"
-                elif especiales["az_ini"].date() <= f_actual <= especiales["az_fin"].date():
-                    b_style, icons = "border: 2px solid #FFC0CB; background: #241a1d; border-radius: 10px;", "🫓"
-                elif f_actual in celebs_mes:
-                    b_style, icons = "border: 2px solid #FF8C00; background: #2c1a0a; border-radius: 10px;", "🌘"
-                if f_actual == especiales["equinoccio"].date(): icons += "🌸"
+                if f_actual == esp["n13"].date(): b_style, icons = "border: 2px solid #FF0000; background: #2c0a0a; border-radius: 10px;", "🍷"
+                elif esp["az_ini"].date() <= f_actual <= esp["az_fin"].date(): b_style, icons = "border: 2px solid #FFC0CB; background: #241a1d; border-radius: 10px;", "🫓"
+                elif f_actual in celebs: b_style, icons = "border: 2px solid #FF8C00; background: #2c1a0a; border-radius: 10px;", "🌘"
+                if f_actual == esp["equinoccio"].date(): icons += "🌸"
                 if dia in fases_dict and "🌘" not in icons: icons += iconos_fases[fases_dict[dia]]
                 if f_actual == hoy_sv.date(): b_style = "border: 2px solid #00FF7F; background: #0a2c1a; border-radius: 10px;"
                 fila += f"<td style='padding:4px;'><div style='{b_style} height: 75px; padding: 6px; box-sizing: border-box; color: white;'><div style='font-weight:bold; font-size:13px;'>{dia}</div><div style='text-align:center; font-size:24px; margin-top:2px;'>{icons}</div></div></td>"
@@ -118,8 +112,9 @@ with tab_mes:
 
     st.markdown(f"<h2 style='text-align:center; color:#FF8C00; margin-top:15px; font-size:22px;'>{meses_completos[mes_id-1]} {anio}</h2>", unsafe_allow_html=True)
     components.html(f"<style>table{{width:100%; border-collapse:collapse; font-family:sans-serif; table-layout:fixed;}} th{{color:#FF4B4B; padding-bottom:5px; text-align:center; font-weight:bold; font-size:14px;}}</style><table><tr><th>D</th><th>L</th><th>M</th><th>M</th><th>J</th><th>V</th><th>S</th></tr>{filas_html}</table>", height=440)
+    st.markdown("<p class='signature-text'>Voz de la Tórtola, Nejapa.</p>", unsafe_allow_html=True)
 
-# --- CONTENIDO PESTAÑA 2: AÑO ---
+# --- PESTAÑA 2: AÑO ---
 with tab_anio:
     anio_full = st.number_input("Año", 2024, 2030, hoy_sv.year, key="anio_f")
     esp_a = obtener_fechas_especiales(anio_full)
@@ -141,51 +136,48 @@ with tab_anio:
             mes_html += "</tr>"
         grid_html += mes_html + "</table></div>"
     components.html(grid_html + "</div>", height=1150, scrolling=True)
+    st.markdown("<p class='signature-text'>Voz de la Tórtola, Nejapa.</p>", unsafe_allow_html=True)
 
-# --- CONTENIDO PESTAÑA 3: SIMBOLOGÍA ---
+# --- PESTAÑA 3: SIMBOLOGÍA ---
 with tab_simb:
-    st.markdown("<h3 style='color:#FF8C00; text-align:center;'>Guía de Marcadores y Datos</h3>", unsafe_allow_html=True)
+    st.markdown("<h3 style='color:#FF8C00; text-align:center;'>Guía de Marcadores</h3>", unsafe_allow_html=True)
+    c1, c2 = st.columns(2)
+    with c1:
+        simbolos = [
+            ("🟢", "<b>Día Actual:</b> Indica la fecha de hoy en tiempo real."),
+            ("🍷", "<b>13 de Nisán:</b> Celebración de la Cena del Señor."),
+            ("🫓", "<b>15-21 de Nisán:</b> Semana de los Ázimos (Panes sin Levadura)."),
+            ("🌘", "<b>Día 1 (Aviv):</b> Luna de Observación / Inicio de mes lunar."),
+            ("🌸", "<b>Equinoccio:</b> Inicio astronómico de la primavera."),
+            ("🌑", "<b>Conjunción:</b> Momento exacto de la Luna Nueva astronómica."),
+            ("🌕", "<b>Luna Llena:</b> Fase de iluminación completa de la Luna.")
+        ]
+        html_simb = '<div class="info-box">'
+        for emoji, texto in simbolos:
+            html_simb += f'<div class="symbol-row"><div class="symbol-emoji">{emoji}</div><div class="symbol-divider"></div><div class="symbol-text">{texto}</div></div>'
+        st.markdown(html_simb + '</div>', unsafe_allow_html=True)
     
-    col1, col2 = st.columns(2)
-    with col1:
-        st.markdown("""
-        <div class="info-box">
-            <p style="color:#FF8C00; font-weight:bold; margin-bottom:15px; font-size:18px;">Simbología del Calendario:</p>
-            <div class="info-line"><span class="emoji-size">🟢</span> <b>Día Actual:</b> Indica la fecha de hoy.</div>
-            <div class="info-line"><span class="emoji-size">🍷</span> <b>13 de Nisán:</b> Celebración de la Cena del Señor.</div>
-            <div class="info-line"><span class="emoji-size">🫓</span> <b>15-21 de Nisán:</b> Semana de los Ázimos (Panes sin Levadura).</div>
-            <div class="info-line"><span class="emoji-size">🌘</span> <b>Día 1 (Aviv):</b> Luna de Observación / Inicio de mes lunar.</div>
-            <div class="info-line"><span class="emoji-size">🌸</span> <b>Equinoccio:</b> Inicio astronómico de la primavera.</div>
-            <div class="info-line"><span class="emoji-size">🌑</span> <b>Conjunción:</b> Momento exacto de la Luna Nueva.</div>
-            <div class="info-line"><span class="emoji-size">🌕</span> <b>Luna Llena:</b> Fase de iluminación completa.</div>
-        </div>
-        """, unsafe_allow_html=True)
-    
-    with col2:
-        # Recuperamos la última conjunción para mostrarla aquí también
+    with c2:
         _, conjs_info = obtener_celebraciones_mes(anio, mes_id)
         i_sv = conjs_info[0].strftime('%A %d/%m/%y %I:%M %p') if conjs_info else "---"
         i_utc = conjs_info[0].astimezone(pytz.utc).strftime('%A %d/%m/%y %H:%M') if conjs_info else "---"
-        
         st.markdown(f"""
         <div class="info-box">
-            <p style="color:#FF8C00; font-weight:bold; margin-bottom:15px; font-size:18px;">Próxima Conjunción (Mes Seleccionado):</p>
+            <p style="color:#FF8C00; font-weight:bold; margin-bottom:15px; font-size:18px;">Datos de Conjunción:</p>
             <div class="label-conjunction">EL SALVADOR (ES)</div>
             <div class="data-conjunction">{i_sv}</div>
             <div class="label-conjunction">TIEMPO UNIVERSAL (UTC)</div>
             <div class="data-conjunction">{i_utc}</div>
-            <p style="font-size: 13px; color: #aaa; margin-top: 20px;">
-                * Si la conjunción ocurre después de las 18:00 (6:00 PM), el Día 1 se traslada al segundo día posterior.
+            <p style="font-size: 13px; color: #aaa; border-top: 1px solid #333; padding-top: 15px;">
+                * La observación del Día 1 depende de la hora de la conjunción y la visibilidad del primer creciente.
             </p>
         </div>
         """, unsafe_allow_html=True)
 
     st.markdown("""
     <div class='nasa-footer'>
-        <p style='color: #FF8C00; font-size: 18px; font-weight: bold; font-style: italic; margin-bottom: 8px;'>Voz de la Tórtola, Nejapa.</p>
-        <b>Respaldo Científico:</b><br>
-        Este sistema utiliza las efemérides planetarias <b>DE421 de la NASA</b> y algoritmos de alta precisión del 
-        <b>Observatorio Naval de los Estados Unidos (USNO)</b> para garantizar que cada fase lunar y evento estacional 
-        sea exacto según la posición geográfica de El Salvador.
+        <p style='color: #FF8C00; font-size: 18px; font-weight: bold; font-style: italic;'>Voz de la Tórtola, Nejapa.</p>
+        <b>Respaldo Científico:</b> Efemérides <b>NASA DE421</b> y algoritmos del <b>USNO</b>.<br>
+        Todo el sistema está calibrado para la geolocalización técnica de El Salvador.
     </div>
     """, unsafe_allow_html=True)
