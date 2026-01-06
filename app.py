@@ -17,6 +17,7 @@ dias_esp = {
 }
 
 meses_completos = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"]
+meses_hebreos = ["Aviv", "Ziv", "Siván", "Tamuz", "Av", "Elul", "Etanim", "Bul", "Quisleu", "Tebet", "Sabat", "Adar", "Adar II"]
 
 # ESTILOS CSS
 st.markdown("""
@@ -35,6 +36,7 @@ st.markdown("""
     .symbol-text { flex-grow: 1; font-size: 13px; margin-left: 12px; }
     .signature { text-align: center; color: #FF8C00; font-size: 20px; font-weight: bold; font-style: italic; margin-top: 30px; }
     .footer-tech { text-align: center; color: #666; font-size: 11px; margin-top: 10px; border-top: 1px solid #333; padding-top: 10px; line-height: 1.6; }
+    .sub-title-heb { text-align: center; color: #888; font-size: 16px; margin-top: -15px; margin-bottom: 15px; font-style: italic; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -68,6 +70,7 @@ def obtener_fechas_especiales(anio_objetivo):
     dia_1_mes7 = (lunas7[0] + timedelta(days=(1 if lunas7[0].hour < 18 else 2))).date()
 
     return {
+        "aviv_1": dia_1_aviv,
         "n13": dia_1_aviv + timedelta(days=12), 
         "az_ini": dia_1_aviv + timedelta(days=14), "az_fin": dia_1_aviv + timedelta(days=20), 
         "omer_ini": dia_1_aviv + timedelta(days=15), "equinoccio": f_eq.date(),
@@ -81,12 +84,18 @@ def obtener_datos_mes(anio, mes):
     t1 = ts.from_datetime(inicio + timedelta(days=32))
     t_f, y_f = almanac.find_discrete(t0, t1, almanac.moon_phases(eph))
     celebs, conjs, fases = [], [], {}
+    esp = obtener_fechas_especiales(anio)
+    
     for ti, yi in zip(t_f, y_f):
         f_dt = ti.astimezone(tz_sv)
         if yi == 0:
             conjs.append(f_dt)
             dia_c = (f_dt + timedelta(days=(1 if f_dt.hour < 18 else 2))).date()
-            if dia_c.month == mes and dia_c.year == anio: celebs.append(dia_c)
+            if dia_c.month == mes and dia_c.year == anio:
+                diff_days = (dia_c - esp["aviv_1"]).days
+                num_mes_heb = round(diff_days / 29.5) % 12
+                nombre_heb = meses_hebreos[num_mes_heb]
+                celebs.append((dia_c, nombre_heb))
         if f_dt.month == mes: fases[f_dt.day] = yi
     return celebs, conjs, fases
 
@@ -95,11 +104,18 @@ tab_mes, tab_anio, tab_simb = st.tabs(["📅 Vista Mensual", "🗓️ Año Compl
 
 with tab_mes:
     c_a, c_m = st.columns(2)
-    with c_a: anio_m = st.number_input("Año", 2024, 2030, hoy_sv.year)
+    with c_a: anio_m = st.number_input("Año", 2024, 2035, hoy_sv.year)
     with c_m: mes_m = st.number_input("Mes", 1, 12, hoy_sv.month)
     
     esp = obtener_fechas_especiales(anio_m)
     celebs, conjs, fases_mes = obtener_datos_mes(anio_m, mes_m)
+    
+    st.markdown(f"<h2 style='text-align:center; color:#FF8C00; margin-bottom:5px;'>{meses_completos[mes_m-1]} {anio_m}</h2>", unsafe_allow_html=True)
+    
+    # Mostrar el texto pequeño del inicio del mes hebreo
+    if celebs:
+        dia_heb, nombre_heb = celebs[0]
+        st.markdown(f"<div class='sub-title-heb'>{dia_heb.day} de {meses_completos[mes_m-1]}, 1 de {nombre_heb}</div>", unsafe_allow_html=True)
     
     iconos_fases = {0: "🌑", 1: "🌓", 2: "🌕", 3: "🌗"}
     filas = ""
@@ -111,9 +127,15 @@ with tab_mes:
                 f_act = tz_sv.localize(datetime(anio_m, mes_m, dia)).date()
                 bg, border, omer_txt = "#1a1c23", "1px solid #333", ""
                 icons_list = []
+                
+                # Resaltar Día 1 lunar
+                if any(dia == c[0].day for c in celebs):
+                    bg, border = "#2c1a0a", "2px solid #FF8C00"
+                    icons_list.append("🌘")
+
                 d_omer = (f_act - esp["omer_ini"]).days + 1
                 if 1 <= d_omer <= 50:
-                    omer_txt = f"<div style='position:absolute; top:2px; right:4px; color:#9370DB; font-size:10px; font-weight:bold;'>{d_omer}</div>"
+                    omer_txt = f<div style='position:absolute; top:2px; right:4px; color:#9370DB; font-size:10px; font-weight:bold;'>{d_omer}</div>
                     if d_omer == 1: icons_list.append("🌾")
                     elif d_omer == 50: icons_list.append("🔥")
 
@@ -121,7 +143,6 @@ with tab_mes:
                 elif esp["az_ini"] <= f_act <= esp["az_fin"]: bg, border = "#241a1d", "2px solid #FFC0CB"; icons_list.append("🫓")
                 elif f_act == esp["yom_kippur"]: bg, border = "#2c0a0a", "2px solid #FF0000"; icons_list.append("🐏")
                 elif esp["sucot_ini"] <= f_act <= esp["sucot_fin"]: bg, border = "#0a2c1a", "2px solid #3EB489"; icons_list.append("🌿")
-                elif f_act in celebs: bg, border = "#2c1a0a", "2px solid #FF8C00"; icons_list.append("🌘")
                 
                 if f_act == esp["equinoccio"]: icons_list.append("🌸")
                 if dia in fases_mes: icons_list.append(iconos_fases[fases_mes[dia]])
@@ -131,7 +152,6 @@ with tab_mes:
                 fila += f"<td style='padding:3px;'><div style='background:{bg}; border:{border}; height:85px; border-radius:10px; position:relative; padding:5px; box-sizing:border-box;'><div style='color:white; font-size:12px; font-weight:bold;'>{dia}</div>{omer_txt}<div style='text-align:center; font-size:22px; margin-top:5px; line-height:1.1;'>{icon_text}</div></div></td>"
         filas += fila + "</tr>"
 
-    st.markdown(f"<h2 style='text-align:center; color:#FF8C00;'>{meses_completos[mes_m-1]} {anio_m}</h2>", unsafe_allow_html=True)
     components.html(f"<style>table{{width:100%; border-collapse:collapse; table-layout:fixed; font-family:sans-serif;}} th{{color:#FF4B4B; padding:5px; font-size:14px;}}</style><table><tr><th>D</th><th>L</th><th>M</th><th>M</th><th>J</th><th>V</th><th>S</th></tr>{filas}</table>", height=550)
 
     if conjs:
@@ -139,7 +159,7 @@ with tab_mes:
         st.markdown(f"""<div class="conjunction-card"><p style="color:#FF8C00; font-weight:bold; font-size:15px; margin-bottom:5px;">Próxima Conjunción ({meses_completos[mes_m-1]}):</p><div class="label-city">📍 El Salvador (SV)</div><div class="time-data">{dias_esp[c_sv.strftime('%A')]} {c_sv.strftime('%d/%m/%y %I:%M %p')}</div><div class="label-city">🌍 Tiempo Universal (UTC)</div><div class="time-data">{dias_esp[c_utc.strftime('%A')]} {c_utc.strftime('%d/%m/%y')} {c_utc.strftime('%H:%M')} UTC</div></div>""", unsafe_allow_html=True)
 
 with tab_anio:
-    anio_f = st.number_input("Seleccionar Año", 2024, 2030, anio_m, key="input_anio_full")
+    anio_f = st.number_input("Seleccionar Año", 2024, 2035, anio_m, key="input_anio_full")
     esp_a = obtener_fechas_especiales(anio_f)
     grid_html = "<div style='display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; padding: 10px;'><style>@media (max-width: 800px) { div { grid-template-columns: repeat(2, 1fr) !important; } } @media (max-width: 500px) { div { grid-template-columns: 1fr !important; } } .mes-box { background:#1a1c23; padding:8px; border-radius:10px; border:1px solid #333; color:white; } .mes-title { color:#FF8C00; font-weight:bold; text-align:center; font-size:13px; margin-bottom:5px; } .mes-table { width:100%; font-size:10px; text-align:center; border-collapse:collapse; }</style>"
     for m in range(1, 13):
@@ -156,7 +176,7 @@ with tab_anio:
                     if f_l == esp_a["n13"] or f_l == esp_a["yom_kippur"]: est = "border: 1px solid #FF0000; border-radius: 3px; background: #2c0a0a;"
                     elif esp_a["az_ini"] <= f_l <= esp_a["az_fin"]: est = "border: 1px solid #FFC0CB; border-radius: 3px; background: #241a1d;"
                     elif esp_a["sucot_ini"] <= f_l <= esp_a["sucot_fin"]: est = "border: 1px solid #3EB489; border-radius: 3px; background: #0a2c1a;"
-                    elif f_l in celebs_a: est = "border: 1px solid #FF8C00; border-radius: 3px; background: #2c1a0a;"
+                    elif any(f_l == c[0] for c in celebs_a): est = "border: 1px solid #FF8C00; border-radius: 3px; background: #2c1a0a;"
                     mes_html += f"<td><div style='{est} color:{n_cl}; font-weight:bold;'>{d}</div></td>"
             mes_html += "</tr>"
         grid_html += mes_html + "</table></div>"
@@ -170,6 +190,5 @@ with tab_simb:
         html_s += f'<div class="symbol-row"><div class="symbol-emoji">{e}</div><div class="symbol-text"><b>{t}</b></div></div>'
     st.markdown(html_s + '</div>', unsafe_allow_html=True)
 
-# --- CIERRE FINAL ---
 st.markdown("<div class='signature'>Voz de la Tórtola, Nejapa.</div>", unsafe_allow_html=True)
-st.markdown("<div class='footer-tech'><b>Respaldo Científico:</b> Efemérides Planetarias NASA DE421 / Algoritmos de Precisión USNO.<br>Cálculos astronómicos validados para la posición geográfica de El Salvador.</div>", unsafe_allow_html=True)
+st.markdown("<div class='footer-tech'><b>Respaldo Científico:</b> NASA DE421 / USNO.</div>", unsafe_allow_html=True)
