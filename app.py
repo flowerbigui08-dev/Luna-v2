@@ -112,7 +112,7 @@ with tab_mes:
     
     st.markdown(f"<h2 style='text-align:center; color:#FF8C00; margin-bottom:5px;'>{meses_completos[mes_m-1]} {anio_m}</h2>", unsafe_allow_html=True)
     
-    # Mostrar el texto pequeño del inicio del mes hebreo
+    # Subtítulo con el inicio del mes hebreo
     if celebs:
         dia_heb, nombre_heb = celebs[0]
         st.markdown(f"<div class='sub-title-heb'>{dia_heb.day} de {meses_completos[mes_m-1]}, 1 de {nombre_heb}</div>", unsafe_allow_html=True)
@@ -135,7 +135,7 @@ with tab_mes:
 
                 d_omer = (f_act - esp["omer_ini"]).days + 1
                 if 1 <= d_omer <= 50:
-                    omer_txt = f<div style='position:absolute; top:2px; right:4px; color:#9370DB; font-size:10px; font-weight:bold;'>{d_omer}</div>
+                    omer_txt = f"<div style='position:absolute; top:2px; right:4px; color:#9370DB; font-size:10px; font-weight:bold;'>{d_omer}</div>"
                     if d_omer == 1: icons_list.append("🌾")
                     elif d_omer == 50: icons_list.append("🔥")
 
