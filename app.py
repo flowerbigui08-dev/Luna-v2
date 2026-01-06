@@ -9,7 +9,13 @@ import calendar
 # 1. CONFIGURACIÓN
 st.set_page_config(page_title="Luna SV", layout="wide")
 tz_sv = pytz.timezone('America/El_Salvador')
+tz_utc = pytz.utc
 hoy_sv = datetime.now(tz_sv)
+
+dias_esp = {
+    "Monday": "Lunes", "Tuesday": "Martes", "Wednesday": "Miércoles",
+    "Thursday": "Jueves", "Friday": "Viernes", "Saturday": "Sábado", "Sunday": "Domingo"
+}
 
 meses_completos = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"]
 
@@ -27,6 +33,9 @@ st.markdown("""
     .symbol-emoji { width: 50px; text-align: center; font-size: 22px; flex-shrink: 0; }
     .symbol-divider { width: 1px; height: 25px; background-color: #444; margin: 0 15px; flex-shrink: 0; }
     .symbol-text { flex-grow: 1; font-size: 14px; line-height: 1.4; }
+    
+    .label-conjunction { color: #888; font-size: 12px; margin-top: 10px; text-transform: uppercase; letter-spacing: 1px; }
+    .data-conjunction { color: white; font-size: 16px; font-weight: bold; font-family: 'Courier New', monospace; }
     
     .signature-text { text-align: center; color: #FF8C00; font-size: 18px; font-weight: bold; font-style: italic; margin-top: 20px; }
     .nasa-footer { margin-top: 30px; padding: 20px; text-align: center; color: #888; font-size: 13px; line-height: 1.6; border-top: 1px solid #333; }
@@ -111,12 +120,18 @@ with tab_mes:
                 
                 # Marcadores de Fiestas
                 if f_actual == esp["n13"]: b_style, icons = "border: 2px solid #FF0000; background: #2c0a0a; border-radius: 10px;", "🍷"
-                elif esp["az_ini"] <= f_actual <= esp["az_fin"]: b_style, icons = "border: 2px solid #FFC0CB; background: #241a1d; border-radius: 10px;", "🫓"
+                elif esp["az_ini"] <= f_actual <= esp["az_fin"]: 
+                    b_style = "border: 2px solid #FFC0CB; background: #241a1d; border-radius: 10px;"
+                    if delta_omer != 1: icons = "🫓"
                 elif f_actual in celebs: b_style, icons = "border: 2px solid #FF8C00; background: #2c1a0a; border-radius: 10px;", "🌘"
                 
-                # Otros (Equinoccio, Fases, Hoy)
+                # Prioridad Luna Llena y otros
                 if f_actual == esp["equinoccio"]: icons += "🌸"
-                if dia in fases_dict and "🌘" not in icons: icons += iconos_fases[fases_dict[dia]]
+                if dia in fases_dict:
+                    # Si es luna llena 🌕, la mostramos siempre al lado del otro icono si existe
+                    if fases_dict[dia] == 2: icons += "🌕"
+                    elif not icons: icons += iconos_fases[fases_dict[dia]]
+                
                 if f_actual == hoy_sv.date(): b_style = "border: 2px solid #00FF7F; background: #0a2c1a; border-radius: 10px;"
                 
                 fila += f"<td style='padding:4px;'><div style='{b_style} height: 75px; padding: 6px; box-sizing: border-box; position: relative;'><div style='font-weight:bold; font-size:13px; color:white;'>{dia}</div>{omer_label}<div style='text-align:center; font-size:24px; margin-top:2px;'>{icons}</div></div></td>"
@@ -155,15 +170,15 @@ with tab_simb:
     c1, c2 = st.columns(2)
     with c1:
         simbolos = [
-            ("🟢", "<b>Día Actual:</b> Indica la fecha de hoy en tiempo real."),
-            ("🌾", "<b>Día 1 del Omer:</b> Ofrenda de la Primicia (16 de Aviv)."),
-            ("🔥", "<b>Día 50 del Omer:</b> Fiesta de Shavuot (Pentecostés)."),
-            ("<span style='color:#9370DB; font-weight:bold;'>1-50</span>", "<b>Contador Morado:</b> Número del día en la cuenta del Omer."),
-            ("🍷", "<b>13 de Nisán:</b> Celebración de la Cena del Señor."),
-            ("🫓", "<b>15-21 de Nisán:</b> Semana de los Ázimos (Panes sin Levadura)."),
-            ("🌘", "<b>Día 1 (Aviv):</b> Luna de Observación / Inicio de mes lunar."),
-            ("🌸", "<b>Equinoccio:</b> Inicio astronómico de la primavera."),
-            ("🌑", "<b>Conjunción:</b> Momento exacto de la Luna Nueva astronómica.")
+            ("🟢", "<b>Día Actual:</b> Fecha de hoy."),
+            ("🌾", "<b>Día 1 del Omer:</b> Primicia."),
+            ("🔥", "<b>Día 50 del Omer:</b> Shavuot."),
+            ("<span style='color:#9370DB; font-weight:bold;'>1-50</span>", "<b>Contador:</b> Día de la cuenta."),
+            ("🍷", "<b>13 de Nisán:</b> Cena del Señor."),
+            ("🫓", "<b>15-21 de Nisán:</b> Ázimos."),
+            ("🌘", "<b>Día 1 (Aviv):</b> Luna de Observación."),
+            ("🌕", "<b>Luna Llena:</b> Plenilunio."),
+            ("🌑", "<b>Conjunción:</b> Luna Nueva astronómica.")
         ]
         html_simb = '<div class="info-box">'
         for em, tx in simbolos:
@@ -172,8 +187,21 @@ with tab_simb:
     
     with c2:
         _, conjs_info = obtener_celebraciones_mes(anio_m, mes_id)
-        i_sv = conjs_info[0].strftime('%A %d/%m/%y %I:%M %p') if conjs_info else "---"
-        st.markdown(f'<div class="info-box"><p style="color:#FF8C00; font-weight:bold; font-size:18px;">Próxima Conjunción:</p><div style="font-size:18px; font-weight:bold;">{i_sv}</div></div>', unsafe_allow_html=True)
+        if conjs_info:
+            c_sv = conjs_info[0].astimezone(tz_sv)
+            c_utc = conjs_info[0].astimezone(tz_utc)
+            dia_sv = dias_esp[c_sv.strftime('%A')]
+            dia_utc = dias_esp[c_utc.strftime('%A')]
+            
+            st.markdown(f"""
+            <div class="info-box">
+                <p style="color:#FF8C00; font-weight:bold; font-size:18px; margin-bottom:10px;">Próxima Conjunción:</p>
+                <div class="label-conjunction">EL SALVADOR (ES)</div>
+                <div class="data-conjunction">{dia_sv} {c_sv.strftime('%d/%m/%y %I:%M %p')}</div>
+                <div class="label-conjunction">TIEMPO UNIVERSAL (UTC)</div>
+                <div class="data-conjunction">{dia_utc} {c_utc.strftime('%H:%M')} UTC</div>
+            </div>
+            """, unsafe_allow_html=True)
 
 st.markdown("""
     <div class='nasa-footer'>
