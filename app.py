@@ -147,9 +147,9 @@ with tab_simb:
             ("🟢", "<b>Día Actual:</b> Indica la fecha de hoy en tiempo real."),
             ("🍷", "<b>13 de Nisán:</b> Celebración de la Cena del Señor."),
             ("🫓", "<b>15-21 de Nisán:</b> Semana de los Ázimos (Panes sin Levadura)."),
-            ("🌘", "<b>Día 1 (Aviv):</b> Luna de Observación / Inicio de Mes."),
+            ("🌘", "<b>Día 1 (Aviv):</b> Luna de Observación / Inicio de mes lunar."),
             ("🌸", "<b>Equinoccio:</b> Inicio astronómico de la primavera."),
-            ("🌑", "<b>Conjunción:</b> Conjuncion."),
+            ("🌑", "<b>Conjunción:</b> Momento exacto de la Luna Nueva astronómica."),
             ("🌕", "<b>Luna Llena:</b> Fase de iluminación completa de la Luna.")
         ]
         html_simb = '<div class="info-box">'
