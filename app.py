@@ -93,16 +93,8 @@ def obtener_datos_mes(anio, mes):
             dia_c = (f_dt + timedelta(days=(1 if f_dt.hour < 18 else 2))).date()
             if dia_c.month == mes and dia_c.year == anio:
                 diff_days = (dia_c - esp["aviv_1"]).days
-                num_mes_heb = round(diff_days / 29.5)
-                
-                # Lógica para Adar II y nombres
-                if num_mes_heb < 0:
-                    nombre_heb = "Adar II" if num_mes_heb == -1 else "Mes anterior"
-                elif num_mes_heb >= 12:
-                    nombre_heb = "Adar II"
-                else:
-                    nombre_heb = meses_hebreos[num_mes_heb]
-                
+                num_mes_heb = round(diff_days / 29.5) % 12
+                nombre_heb = meses_hebreos[num_mes_heb]
                 celebs.append((dia_c, nombre_heb))
         if f_dt.month == mes: fases[f_dt.day] = yi
     return celebs, conjs, fases
@@ -120,6 +112,7 @@ with tab_mes:
     
     st.markdown(f"<h2 style='text-align:center; color:#FF8C00; margin-bottom:5px;'>{meses_completos[mes_m-1]} {anio_m}</h2>", unsafe_allow_html=True)
     
+    # Subtítulo con el inicio del mes hebreo
     if celebs:
         dia_heb, nombre_heb = celebs[0]
         st.markdown(f"<div class='sub-title-heb'>{dia_heb.day} de {meses_completos[mes_m-1]}, 1 de {nombre_heb}</div>", unsafe_allow_html=True)
@@ -135,6 +128,7 @@ with tab_mes:
                 bg, border, omer_txt = "#1a1c23", "1px solid #333", ""
                 icons_list = []
                 
+                # Resaltar Día 1 lunar
                 if any(dia == c[0].day for c in celebs):
                     bg, border = "#2c1a0a", "2px solid #FF8C00"
                     icons_list.append("🌘")
@@ -159,6 +153,10 @@ with tab_mes:
         filas += fila + "</tr>"
 
     components.html(f"<style>table{{width:100%; border-collapse:collapse; table-layout:fixed; font-family:sans-serif;}} th{{color:#FF4B4B; padding:5px; font-size:14px;}}</style><table><tr><th>D</th><th>L</th><th>M</th><th>M</th><th>J</th><th>V</th><th>S</th></tr>{filas}</table>", height=550)
+
+    if conjs:
+        c_sv = conjs[0].astimezone(tz_sv); c_utc = conjs[0].astimezone(tz_utc)
+        st.markdown(f"""<div class="conjunction-card"><p style="color:#FF8C00; font-weight:bold; font-size:15px; margin-bottom:5px;">Próxima Conjunción ({meses_completos[mes_m-1]}):</p><div class="label-city">📍 El Salvador (SV)</div><div class="time-data">{dias_esp[c_sv.strftime('%A')]} {c_sv.strftime('%d/%m/%y %I:%M %p')}</div><div class="label-city">🌍 Tiempo Universal (UTC)</div><div class="time-data">{dias_esp[c_utc.strftime('%A')]} {c_utc.strftime('%d/%m/%y')} {c_utc.strftime('%H:%M')} UTC</div></div>""", unsafe_allow_html=True)
 
 with tab_anio:
     anio_f = st.number_input("Seleccionar Año", 2024, 2035, anio_m, key="input_anio_full")
