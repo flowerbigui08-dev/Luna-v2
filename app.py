@@ -140,7 +140,7 @@ with tab_mes:
         c_utc = conjs[0].astimezone(tz_utc)
         st.markdown(f"""
         <div class="conjunction-card">
-            <p style="color:#FF8C00; font-weight:bold; font-size:18px; margin:0; text-align:center;">Próxima Conjunción ({meses_completos[mes_m-1]}):</p>
+            <p style="color:#FF8C00; font-weight:bold; font-size:13px; margin:0; text-align:center;">Próxima Conjunción ({meses_completos[mes_m-1]}):</p>
             <div class="label-city">📍 EL SALVADOR (SV)</div>
             <div class="time-data">{dias_esp[c_sv.strftime('%A')]} {c_sv.strftime('%d/%m/%y %I:%M %p')}</div>
             <div style="height:1px; background:#333; margin:15px 0;"></div>
